@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Pioneer</title>
+    <link rel="stylesheet" href="css/stupid.css">
+</head>
+<body>
+    <div class="container max900 center" style="max-width:600px">
+        <h2 style="margin-bottom:1em">{{ .Motd }}</h2>
+        {{ range $i, $cmd := .Commands }}
+            <div class="glass lifted padded fill">
+                <h4>{{ $cmd.Name }}</h4>
+                <p>{{ $cmd.Description }}</p>
+                <button class="btn rounded center" onclick="cmd({{ $cmd.ID }})" style="margin-top: 1em">Trigger</button>
+            </div>
+        {{ end }}
+        <button class="btn rounded center red" onclick="logout()" style="margin-top: 4em">Logout</button>
+    </div>
+    <script src="js/main.js"></script>
+</body>
+</html>

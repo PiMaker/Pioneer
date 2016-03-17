@@ -1,0 +1,18 @@
+{
+    "ssl": "False",
+    "password": "Passw0rd",
+    "motd": "Welcome to Pioneer!",
+    "commands": [
+        {
+            "type": "basic",
+            "name": "Hello World",
+            "description": "Prints \"Hello World!\" to the server console (if supported by host).",
+            "data": {
+                "command": "echo",
+                "args": [
+                    "Hello World!"
+                ]
+            }
+        }
+    ]
+}

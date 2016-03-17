@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Pioneer</title>
+    <link rel="stylesheet" href="css/stupid.css">
+</head>
+<body>
+    <div class="container max900 center" style="max-width:22rem">
+        <h3>Welcome to Pioneer!</h3>
+        <p class="center">Please enter your password:</p>
+        <form action="javascript:void(0);">
+            <input type="password" id="passwordField" autofocus/>
+            <button class="btn rounded center" onclick="login()" style="margin-top: 1em" type="submit">Login!</button>
+        </form>
+        <p id="errorText" style="display:none;color:red;">Please try again!</p>
+    </div>
+    <script src="js/login.js"></script>
+</body>
+</html>
