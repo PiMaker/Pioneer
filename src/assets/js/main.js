@@ -1,10 +1,12 @@
 function cmd(id, data) {
+    document.getElementById("body").className = "loading";
     var http = new XMLHttpRequest();
     http.open("POST", "/api/cmd/" + id, true);
     http.setRequestHeader("Connection", "close");
 
     http.onreadystatechange = function() {
         if (http.readyState == 4) {
+            document.getElementById("body").className = "";
             if (http.status == 200) {
                 alert("Successful!")
             } else {
@@ -17,12 +19,14 @@ function cmd(id, data) {
 }
 
 function logout() {
+    document.getElementById("body").className = "loading";
     var http = new XMLHttpRequest();
     http.open("POST", "/api/logout", true);
     http.setRequestHeader("Connection", "close");
 
     http.onreadystatechange = function() {
         if (http.readyState == 4) {
+            document.getElementById("body").className = "";
             if (http.status == 200) {
                 document.location.assign("/")
             } else {

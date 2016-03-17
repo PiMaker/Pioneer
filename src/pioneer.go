@@ -42,6 +42,7 @@ func main() {
     http.HandleFunc("/api/", apiHandler)
     http.Handle("/js/", http.FileServer(http.Dir("./assets")))
     http.Handle("/css/", http.FileServer(http.Dir("./assets")))
+    http.Handle("/img/", http.FileServer(http.Dir("./assets")))
     http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request){
         http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
     })
