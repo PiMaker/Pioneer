@@ -8,9 +8,9 @@ function cmd(id, data) {
         if (http.readyState == 4) {
             document.getElementById("body").className = "";
             if (http.status == 200) {
-                alert("Successful!")
+                popup(http.responseText)
             } else {
-                alert("Server returned an error.")
+                popup("Server returned an error.")
             }
         }
     }
@@ -28,12 +28,20 @@ function logout() {
         if (http.readyState == 4) {
             document.getElementById("body").className = "";
             if (http.status == 200) {
-                document.location.assign("/")
+                document.location.replace("/")
             } else {
-                alert("Server returned an error.")
+                popup("Server returned an error.")
             }
         }
     }
     
     http.send(null);
+}
+function popup(text) {
+    document.getElementById("popup-content").innerHTML = text.replace("\n", "<br></br>");
+    document.getElementById("popup").style = "opacity: 1; visibility: visible;";
+}
+
+function closepopup() {
+    document.getElementById("popup").style = "opacity: 0; visibility: collapsed;";
 }

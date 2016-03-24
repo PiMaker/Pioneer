@@ -8,15 +8,33 @@
 </head>
 <body id="body">
     <div class="container max900 center" style="max-width:600px">
-        <h2 style="margin-bottom:1em">{{ .Motd }}</h2>
+        <h2>{{ .Motd }}</h2>
         {{ range $i, $cmd := .Commands }}
             <div class="glass lifted padded fill">
                 <h4>{{ $cmd.Name }}</h4>
                 <p>{{ $cmd.Description }}</p>
+                
+                {{ if $cmd.IsBasic }}
                 <button class="btn rounded center" onclick="cmd({{ $cmd.ID }})" style="margin-top: 1em">Trigger</button>
+                {{ end }}
+                
+                {{ if $cmd.IsToggle }}
+                <button class="btn rounded center green" onclick="cmd({{ $cmd.ID }}, 'on')" style="margin-top: 1em">On</button>
+                <button class="btn rounded center red" onclick="cmd({{ $cmd.ID }}, 'off')" style="margin-top: 1em">Off</button>
+                {{ end }}
+                
             </div>
         {{ end }}
         <button class="btn rounded center red" onclick="logout()" style="margin-top: 4em">Logout</button>
+    </div>
+    <div class="modal" id="popup">
+      <div class="twothirds rounded white padded relative">
+        <a class="close" onclick="closepopup()">×</a>
+        <p style="font-size: 1.5em;" id="popup-content"></p>
+        <div class="right">
+          <a class="close btn" onclick="closepopup()">Close</a>
+        </div>
+      </div>
     </div>
     <div class="loader"></div>
     <script src="js/main.js"></script>

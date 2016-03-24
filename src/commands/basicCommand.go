@@ -11,12 +11,14 @@ type BasicCommand struct {
 
 const BasicCommandTypeString = "basic"
 
-func (cmd BasicCommand) Execute(parameter interface{}) bool {
-    if err := exec.Command(cmd.command, cmd.args...).Run(); err != nil {
-		return false
+func (cmd BasicCommand) Execute(parameter interface{}) string {
+    retval, err := exec.Command(cmd.command, cmd.args...).CombinedOutput()
+    
+    if err != nil {
+		return err.Error()
 	}
     
-    return true
+    return "Success:\n\n" + string(retval)
 }
 
 func CreateBasicCommand(data JsonObject) *BasicCommand {

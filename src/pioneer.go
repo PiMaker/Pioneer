@@ -9,8 +9,10 @@ import (
     "github.com/twinj/uuid"
     "time"
     
+    "os"
     "io/ioutil"
     "encoding/json"
+    "github.com/DisposaBoy/JsonConfigReader"
     
     "strings"
     "strconv"
@@ -75,9 +77,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func mainHandler(w http.ResponseWriter, r *http.Request) {
-    cookie, err := r.Cookie(pioneerAccessToken)
-    if err != nil || !cookieIsValid(cookie) {
-        http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
+    if !authenticateRequest(w, r) {
         return
     }
     
@@ -126,6 +126,10 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
         
         break
     case "cmd":
+        if !authenticateRequest(w, r) {
+            return
+        }
+        
         body, err := ioutil.ReadAll(r.Body)
         if err != nil {
             http.Error(w, "Parameter error", 500)
@@ -146,11 +150,8 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
         
         for _, cmd := range commands.CommandsAvailable {
             if cmd.ID == id {
-                if cmd.ExecutableCommand.Execute(string(body)) {
-                    return
-                }
-                
-                http.Error(w, "Command returned an error", 500)
+                retval := cmd.ExecutableCommand.Execute(string(body))
+                fmt.Fprint(w, retval)
                 return
             }
         }
@@ -159,6 +160,16 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
         
         break
     }
+}
+
+func authenticateRequest(w http.ResponseWriter, r *http.Request) bool {
+    cookie, err := r.Cookie(pioneerAccessToken)
+    if err != nil || !cookieIsValid(cookie) {
+        http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
+        return false
+    }
+    
+    return true
 }
 
 func cookieIsValid(cookie *http.Cookie) bool {
@@ -177,12 +188,9 @@ func cookieIsValid(cookie *http.Cookie) bool {
 }
 
 func loadConfig() {
-    configString, err := ioutil.ReadFile("config.json")
-    if err != nil {
-        panic("config.json could not be loaded!")
-    }
-    
-    var c interface{}
-    json.Unmarshal(configString, &c)
-    config = c.(map[string]interface{})
+    var v interface{}
+    f, _ := os.Open("config.json")
+    r := JsonConfigReader.New(f)
+    json.NewDecoder(r).Decode(&v)
+    config = v.(map[string]interface{})
 }

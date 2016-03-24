@@ -1,16 +1,34 @@
 {
     "ssl": "False",
+    // "certFile": ""
+    // "keyFile": ""
     "password": "Passw0rd",
     "motd": "Welcome to Pioneer!",
     "commands": [
         {
             "type": "basic",
             "name": "Hello World",
-            "description": "Prints \"Hello World!\" to the server console (if supported by host).",
+            "description": "Returns 'Hello World!'.",
             "data": {
                 "command": "echo",
                 "args": [
                     "Hello World!"
+                ]
+            }
+            // "periodic_exec": 10 // This command executes every 10 seconds
+        },
+        {
+            "type": "toggle",
+            "name": "Toggle something",
+            "description": "Flipswitch action!",
+            "data": {
+                "command_on": "echo",
+                "args_on": [
+                    "Turned on!"
+                ],
+                "command_off": "echo",
+                "args_off": [
+                    "Turned off!"
                 ]
             }
         }
