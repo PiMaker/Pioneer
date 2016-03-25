@@ -50,7 +50,7 @@ func ParseCommands(config JsonObject) {
         }
         
         if periodic, ok := c["periodic_exec"]; ok {
-            RegisterCommandForPeriodicExecution(command, periodic.(int))
+            RegisterCommandForPeriodicExecution(command, int(periodic.(float64)))
         }
         
         command.ID = id
