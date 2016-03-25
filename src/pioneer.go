@@ -129,7 +129,7 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
     case "logout":
         cookie, err := r.Cookie(pioneerAccessToken)
         if err != nil {
-            http.Error(w, "Cookie error", 500)
+            http.Error(w, "Unauthorized", 403)
             return
         }
         
@@ -140,11 +140,31 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
         }
         
         break
+    case "getcmds":
+        cookie, err := r.Cookie(pioneerAccessToken)
+        valid, token := cookieIsValid(cookie)
+        if err != nil || !valid {
+            http.Error(w, "Unauthorized", 403)
+            return
+        }
+        
+        retval := "{"
+        for i, cmd := range templateModels[token.username].Commands {
+            if i > 0 {
+                retval += ","
+            }
+            retval += "\"" + cmd.Name + "\": " + strconv.Itoa(cmd.ID)
+        }
+        retval += "}"
+        
+        fmt.Fprint(w, retval)
+        
+        break;
     case "cmd":
         cookie, err := r.Cookie(pioneerAccessToken)
         valid, token := cookieIsValid(cookie)
         if err != nil || !valid {
-            http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
+            http.Error(w, "Unauthorized", 403)
             return
         }
         
