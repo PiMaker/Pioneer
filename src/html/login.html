@@ -8,9 +8,10 @@
 <body>
     <div class="container max900 center" style="max-width:22rem">
         <h3>Welcome to Pioneer!</h3>
-        <p class="center">Please enter your password:</p>
+        <p class="center">Please enter your credentials:</p>
         <form action="javascript:void(0);">
-            <input type="password" id="passwordField" autofocus/>
+            <input type="text" id="usernameField" autofocus placeholder="username"/>
+            <input type="password" id="passwordField" placeholder="password"/>
             <button class="btn rounded center" onclick="login()" style="margin-top: 1em" type="submit">Login!</button>
         </form>
         <p id="errorText" style="display:none;color:red;">Please try again!</p>

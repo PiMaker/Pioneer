@@ -18,7 +18,7 @@ func (cmd BasicCommand) Execute(parameter interface{}) string {
 		return err.Error()
 	}
     
-    return "Success:\n\n" + string(retval)
+    return "Success:\n" + string(retval)
 }
 
 func CreateBasicCommand(data JsonObject) *BasicCommand {

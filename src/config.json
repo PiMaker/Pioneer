@@ -1,26 +1,42 @@
 {
     "ssl": "False",
-    // "certFile": ""
-    // "keyFile": ""
-    "password": "Passw0rd",
+    // "certFile": "",
+    // "keyFile": "",
     "motd": "Welcome to Pioneer!",
+    "users": [
+        {
+            "username": "pi",
+            "password": "Passw0rd"
+        },
+        {
+            "username": "restricted",
+            "password": "Passw0rd"
+        }
+    ],
     "commands": [
         {
             "type": "basic",
             "name": "Hello World",
             "description": "Returns 'Hello World!'.",
+            "users": [
+                "pi",
+                "restricted"
+            ],
             "data": {
                 "command": "echo",
                 "args": [
                     "Hello World!"
                 ]
             }
-            // "periodic_exec": 10 // This command executes every 10 seconds
+            // "periodic_exec": 10 // This command would silently execute every 10 seconds
         },
         {
             "type": "toggle",
             "name": "Toggle something",
             "description": "Flipswitch action!",
+            "users": [
+                "pi"
+            ],
             "data": {
                 "command_on": "echo",
                 "args_on": [

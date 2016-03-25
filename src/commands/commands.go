@@ -4,7 +4,7 @@ import (
     "time"
 )
 
-var CommandsAvailable []DisplayCommand
+var CommandsAvailable map[int]DisplayCommand
 
 type JsonObject map[string]interface{}
 
@@ -15,6 +15,8 @@ type DisplayCommand struct {
     
     IsBasic bool
     IsToggle bool
+    
+    AllowedUsers []string
 }
 
 type Command interface {
@@ -22,7 +24,7 @@ type Command interface {
 }
 
 func ParseCommands(config JsonObject) {
-    CommandsAvailable = make([]DisplayCommand, 0)
+    CommandsAvailable = make(map[int]DisplayCommand)
     id := 0
     for _, cmd := range config["commands"].([]interface{}) {
         c := cmd.(map[string]interface {})
@@ -42,6 +44,11 @@ func ParseCommands(config JsonObject) {
             command.IsToggle = true
         }
         
+        command.AllowedUsers = make([]string, 0)
+        for _, username := range c["users"].([]interface{}) {
+            command.AllowedUsers = append(command.AllowedUsers, username.(string))
+        }
+        
         if periodic, ok := c["periodic_exec"]; ok {
             RegisterCommandForPeriodicExecution(command, periodic.(int))
         }
@@ -49,7 +56,7 @@ func ParseCommands(config JsonObject) {
         command.ID = id
         id++
         
-        CommandsAvailable = append(CommandsAvailable, command)
+        CommandsAvailable[command.ID] = command
     }
 }
 

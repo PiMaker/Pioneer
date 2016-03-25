@@ -23,11 +23,17 @@ type TemplateModel struct {
     Commands []commands.DisplayCommand
 }
 
+type Token struct {
+    cookie *http.Cookie
+    username string
+}
+
 var (
     templateCollection *template.Template
-    validTokens []*http.Cookie
+    validTokens []Token
     config commands.JsonObject
-    templateModel TemplateModel
+    users map[string]string
+    templateModels map[string]TemplateModel
 )
 
 const pioneerAccessToken = "pioneer-access-token"
@@ -36,7 +42,11 @@ func main() {
     loadConfig()
     commands.ParseCommands(config)
     
-    templateModel = TemplateModel{Motd: config["motd"].(string), Commands: commands.CommandsAvailable}
+    templateModels = make(map[string]TemplateModel)
+    for user := range users {
+        templateModels[user] = TemplateModel{Motd: config["motd"].(string), Commands: getCommandsForUser(user)}
+    }
+    
     templateCollection = template.Must(template.ParseFiles("html/login.html", "html/main.html"))
     
     http.HandleFunc("/login", loginHandler)
@@ -66,7 +76,8 @@ func main() {
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
     cookie, cerr := r.Cookie(pioneerAccessToken)
-    if cerr == nil && cookieIsValid(cookie) {
+    valid, _ := cookieIsValid(cookie)
+    if cerr == nil && valid {
         http.Redirect(w, r, "/main", http.StatusTemporaryRedirect)
         return
     }
@@ -77,11 +88,14 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func mainHandler(w http.ResponseWriter, r *http.Request) {
-    if !authenticateRequest(w, r) {
+    cookie, err := r.Cookie(pioneerAccessToken)
+    valid, token := cookieIsValid(cookie)
+    if err != nil || !valid {
+        http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
         return
     }
     
-    terr := templateCollection.ExecuteTemplate(w, "main.html", templateModel)
+    terr := templateCollection.ExecuteTemplate(w, "main.html", templateModels[token.username])
     if terr != nil {
         http.Error(w, terr.Error(), http.StatusInternalServerError)
     }
@@ -100,10 +114,11 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
     switch command {
     case "login":
         body, error := ioutil.ReadAll(r.Body)
-        if error == nil && string(body) == config["password"] {
+        valid, username := isValidLogin(string(body))
+        if error == nil && valid {
             u := uuid.NewV4()
             cookie := &http.Cookie{Name: pioneerAccessToken, Value: u.String(), Expires: time.Now().Add(30*time.Minute), Path: "/"}
-            validTokens = append(validTokens, cookie)
+            validTokens = append(validTokens, Token{cookie: cookie, username: username})
             http.SetCookie(w, cookie)
             fmt.Fprintln(w, u.String())
         } else {
@@ -119,14 +134,17 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
         }
         
         for i := 0; i < len(validTokens); i++ {
-            if cookie.Value == validTokens[i].Value {
-                validTokens[i].Expires = time.Now().Add(-1 * time.Minute)
+            if cookie.Value == validTokens[i].cookie.Value {
+                validTokens[i].cookie.Expires = time.Now().Add(-1 * time.Minute)
             }
         }
         
         break
     case "cmd":
-        if !authenticateRequest(w, r) {
+        cookie, err := r.Cookie(pioneerAccessToken)
+        valid, token := cookieIsValid(cookie)
+        if err != nil || !valid {
+            http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
             return
         }
         
@@ -148,12 +166,11 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
             return
         }
         
-        for _, cmd := range commands.CommandsAvailable {
-            if cmd.ID == id {
-                retval := cmd.ExecutableCommand.Execute(string(body))
-                fmt.Fprint(w, retval)
-                return
-            }
+        cmd, ok := commands.CommandsAvailable[id]
+        if ok && in(cmd.AllowedUsers, token.username) {
+            retval := cmd.ExecutableCommand.Execute(string(body))
+            fmt.Fprint(w, retval)
+            return
         }
         
         http.Error(w, "Command not found", 404)
@@ -162,29 +179,56 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
     }
 }
 
-func authenticateRequest(w http.ResponseWriter, r *http.Request) bool {
-    cookie, err := r.Cookie(pioneerAccessToken)
-    if err != nil || !cookieIsValid(cookie) {
-        http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
-        return false
-    }
-    
-    return true
-}
-
-func cookieIsValid(cookie *http.Cookie) bool {
-    for i := 0; i < len(validTokens); i++ {
-        if time.Now().After(validTokens[i].Expires) {
-            validTokens = append(validTokens[:i], validTokens[i+1:]...)
-            i--
-            continue
-        }
-        if cookie.Value == validTokens[i].Value {
+func in(haystack []string, needle string) bool {
+    for _, h := range haystack {
+        if h == needle {
             return true
         }
     }
     
     return false
+}
+
+func getCommandsForUser(username string) []commands.DisplayCommand {
+    var retval []commands.DisplayCommand
+    for _, cmd := range commands.CommandsAvailable {
+        if in(cmd.AllowedUsers, username) {
+            retval = append(retval, cmd)
+        }
+    }
+    return retval
+}
+
+func isValidLogin(body string) (bool, string) {
+    nPos := strings.Index(body, "\n")
+    if nPos < 0 || len(body) <= nPos + 1 {
+        return false, ""
+    }
+    
+    username := body[:nPos]
+    password := body[nPos + 1:]
+    
+    expectedPass, ok := users[username]
+    if !ok || expectedPass != password {
+        return false, ""
+    }
+    
+    return true, username
+}
+
+func cookieIsValid(cookie *http.Cookie) (bool,*Token) {
+    for i := 0; i < len(validTokens); i++ {
+        if time.Now().After(validTokens[i].cookie.Expires) {
+            validTokens = append(validTokens[:i], validTokens[i+1:]...)
+            i--
+            continue
+        }
+        if cookie.Value == validTokens[i].cookie.Value {
+            return true,&validTokens[i]
+        }
+    }
+    
+    return false,nil
 }
 
 func loadConfig() {
@@ -193,4 +237,11 @@ func loadConfig() {
     r := JsonConfigReader.New(f)
     json.NewDecoder(r).Decode(&v)
     config = v.(map[string]interface{})
+    
+    users = make(map[string]string)
+    u := config["users"].([]interface{})
+    for _, us := range u {
+        use := us.(map[string]interface{})
+        users[use["username"].(string)] = use["password"].(string)
+    }
 }

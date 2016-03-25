@@ -14,5 +14,5 @@ function login() {
         }
     }
     
-    http.send(document.getElementById("passwordField").value);
+    http.send(document.getElementById("usernameField").value + "\n" + document.getElementById("passwordField").value);
 }
