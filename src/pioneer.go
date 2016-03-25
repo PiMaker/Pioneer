@@ -237,6 +237,9 @@ func isValidLogin(body string) (bool, string) {
 }
 
 func cookieIsValid(cookie *http.Cookie) (bool,*Token) {
+    if cookie == nil {
+        return false,nil
+    }
     for i := 0; i < len(validTokens); i++ {
         if time.Now().After(validTokens[i].cookie.Expires) {
             validTokens = append(validTokens[:i], validTokens[i+1:]...)
