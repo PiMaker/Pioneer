@@ -39,5 +39,9 @@
     </div>
     <div class="loader"></div>
     <script src="js/main.js"></script>
+    {{ if .LiveBackground }}
+    <script>livebckinterval = {{ .LiveBackgroundInterval }} * 1000</script>
+    <script src="js/livebck.js"></script>
+    {{ end }}
 </body>
 </html>

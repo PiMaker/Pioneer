@@ -3,14 +3,25 @@
     // "certFile": "",
     // "keyFile": "",
     "motd": "Welcome to Pioneer!",
+    "live_background": {
+        "enabled": false,
+        "command": "echo Create your status image with this command!",
+        "filename": "test.png",
+        "interval": 2,
+        "users": [
+            "pi"
+        ]
+    },
     "users": [
         {
             "username": "pi",
-            "password": "Passw0rd"
+            "password": "Passw0rd",
+            "status_access": true
         },
         {
             "username": "restricted",
-            "password": "Passw0rd"
+            "password": "Passw0rd",
+            "status_access": false
         }
     ],
     "commands": [

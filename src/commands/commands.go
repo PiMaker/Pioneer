@@ -63,9 +63,9 @@ func ParseCommands(config JsonObject) {
 func RegisterCommandForPeriodicExecution(cmd DisplayCommand, secs int) {
     ticker := time.NewTicker(time.Duration(secs) * time.Second)
     go func() {
-    for {
-       <-ticker.C
-       cmd.ExecutableCommand.Execute("on")
-    }
- }()
+        for {
+            <-ticker.C
+            cmd.ExecutableCommand.Execute("on")
+        }
+    }()
 }

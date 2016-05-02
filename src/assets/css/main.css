@@ -9,6 +9,11 @@
     background: rgba(200, 200, 200, .6) url('/img/ajax-loader.gif') 50% 50% no-repeat;
 }
 
+body {
+    background-repeat: no-repeat;
+    background-size: cover;
+}
+
 body.loading {
     overflow: hidden;   
 }
@@ -19,4 +24,5 @@ body.loading .loader {
 
 .glass {
     margin-top: 2em;
+    background-color: white !important;
 }

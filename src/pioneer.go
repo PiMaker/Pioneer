@@ -10,16 +10,20 @@ import (
     "time"
     
     "os"
+    "os/exec"
     "io/ioutil"
     "encoding/json"
     "github.com/DisposaBoy/JsonConfigReader"
     
     "strings"
     "strconv"
+	"bytes"
 )
 
 type TemplateModel struct {
     Motd string
+    LiveBackground bool
+    LiveBackgroundInterval int
     Commands []commands.DisplayCommand
 }
 
@@ -28,12 +32,28 @@ type Token struct {
     username string
 }
 
+type User struct {
+    username string
+    password string
+    statusAccess bool
+}
+
+type LiveBackgroundSettings struct {
+    enabled bool
+    interval int
+    command string
+    commandArgs []string
+    filename string
+    users []string
+}
+
 var (
     templateCollection *template.Template
     validTokens []Token
     config commands.JsonObject
-    users map[string]string
+    users map[string]User
     templateModels map[string]TemplateModel
+    liveBackground LiveBackgroundSettings
 )
 
 const pioneerAccessToken = "pioneer-access-token"
@@ -42,9 +62,24 @@ func main() {
     loadConfig()
     commands.ParseCommands(config)
     
+    if liveBackground.enabled {
+        exec.Command(liveBackground.command, liveBackground.commandArgs...)
+        ticker := time.NewTicker(time.Duration(liveBackground.interval) * time.Second)
+        go func() {
+            for {
+                <-ticker.C
+                invalidateCookies()
+                if len(validTokens) > 0 {
+                    exec.Command(liveBackground.command, liveBackground.commandArgs...)
+                }
+            }
+        }()
+    }
+    
     templateModels = make(map[string]TemplateModel)
     for user := range users {
-        templateModels[user] = TemplateModel{Motd: config["motd"].(string), Commands: getCommandsForUser(user)}
+        templateModels[user] = TemplateModel{Motd: config["motd"].(string), Commands: getCommandsForUser(user),
+            LiveBackground: liveBackground.enabled && in(liveBackground.users, user), LiveBackgroundInterval: liveBackground.interval}
     }
     
     templateCollection = template.Must(template.ParseFiles("html/login.html", "html/main.html"))
@@ -102,10 +137,6 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func apiHandler(w http.ResponseWriter, r *http.Request) {
-    if r.Method != "POST" {
-        http.Error(w, "You can only POST to this api!", http.StatusBadRequest)
-        return
-    }
     command := r.URL.Path[len("/api/"):]
     slashIndex := strings.Index(command, "/")
     if slashIndex != -1 {
@@ -113,6 +144,10 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
     }
     switch command {
     case "login":
+        if r.Method != "POST" {
+            http.Error(w, "You can only POST to this api!", http.StatusBadRequest)
+            return
+        }
         body, error := ioutil.ReadAll(r.Body)
         valid, username := isValidLogin(string(body))
         if error == nil && valid {
@@ -127,6 +162,10 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
         
         break
     case "logout":
+        if r.Method != "POST" {
+            http.Error(w, "You can only POST to this api!", http.StatusBadRequest)
+            return
+        }
         cookie, err := r.Cookie(pioneerAccessToken)
         if err != nil {
             http.Error(w, "Unauthorized", 403)
@@ -161,6 +200,10 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
         
         break;
     case "cmd":
+        if r.Method != "POST" {
+            http.Error(w, "You can only POST to this api!", http.StatusBadRequest)
+            return
+        }
         cookie, err := r.Cookie(pioneerAccessToken)
         valid, token := cookieIsValid(cookie)
         if err != nil || !valid {
@@ -196,6 +239,31 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
         http.Error(w, "Command not found", 404)
         
         break
+    case "getbck":
+        cookie, err := r.Cookie(pioneerAccessToken)
+        valid, token := cookieIsValid(cookie)
+        if err != nil || !valid || !in(liveBackground.users, token.username) {
+            http.Error(w, "Unauthorized", 403)
+            return
+        }
+        
+        streamBytes, err := ioutil.ReadFile(liveBackground.filename)
+
+        if err != nil {
+            http.Error(w, "Could not load background image...", 500)
+            return
+        }
+
+        b := bytes.NewBuffer(streamBytes)
+        
+        //w.Header().Set("Content-type", "application/pdf")
+        _, writeerr := b.WriteTo(w)
+        
+        if writeerr != nil {
+            http.Error(w, writeerr.Error(), 500)
+        }
+        
+        break
     }
 }
 
@@ -228,8 +296,8 @@ func isValidLogin(body string) (bool, string) {
     username := body[:nPos]
     password := body[nPos + 1:]
     
-    expectedPass, ok := users[username]
-    if !ok || expectedPass != password {
+    expectedUser, ok := users[username]
+    if !ok || expectedUser.password != password {
         return false, ""
     }
     
@@ -240,12 +308,8 @@ func cookieIsValid(cookie *http.Cookie) (bool,*Token) {
     if cookie == nil {
         return false,nil
     }
+    invalidateCookies()
     for i := 0; i < len(validTokens); i++ {
-        if time.Now().After(validTokens[i].cookie.Expires) {
-            validTokens = append(validTokens[:i], validTokens[i+1:]...)
-            i--
-            continue
-        }
         if cookie.Value == validTokens[i].cookie.Value {
             return true,&validTokens[i]
         }
@@ -254,17 +318,48 @@ func cookieIsValid(cookie *http.Cookie) (bool,*Token) {
     return false,nil
 }
 
+func invalidateCookies() {
+    for i := 0; i < len(validTokens); i++ {
+        if time.Now().After(validTokens[i].cookie.Expires) {
+            validTokens = append(validTokens[:i], validTokens[i+1:]...)
+            i--
+            continue
+        }
+    }
+}
+
 func loadConfig() {
+    fmt.Println("Parsing config...")
     var v interface{}
     f, _ := os.Open("config.json")
     r := JsonConfigReader.New(f)
     json.NewDecoder(r).Decode(&v)
     config = v.(map[string]interface{})
     
-    users = make(map[string]string)
+    users = make(map[string]User)
     u := config["users"].([]interface{})
     for _, us := range u {
         use := us.(map[string]interface{})
-        users[use["username"].(string)] = use["password"].(string)
+        uname := use["username"].(string)
+        users[uname] = User{username: uname, password: use["password"].(string), statusAccess: use["status_access"].(bool)}
     }
+    
+    lbc := config["live_background"].(map[string]interface{})
+    cmd := lbc["command"].(string)
+    split := strings.Split(cmd, " ")
+    liveBackground = LiveBackgroundSettings{
+        command: split[0],
+        commandArgs: split[1:],
+        filename: lbc["filename"].(string),
+        interval: int(lbc["interval"].(float64)),
+        users: toStringSlice(lbc["users"].([]interface{})),
+        enabled: lbc["enabled"].(bool) }
+}
+
+func toStringSlice(input []interface{}) []string {
+    toRet := make([]string, len(input))
+    for i := range input {
+        toRet[i] = input[i].(string)
+    }
+    return toRet
 }
