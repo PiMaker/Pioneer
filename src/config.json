@@ -15,13 +15,11 @@
     "users": [
         {
             "username": "pi",
-            "password": "Passw0rd",
-            "status_access": true
+            "password": "Passw0rd"
         },
         {
             "username": "restricted",
-            "password": "Passw0rd",
-            "status_access": false
+            "password": "Passw0rd"
         }
     ],
     "commands": [

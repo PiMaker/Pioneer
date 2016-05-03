@@ -8,7 +8,7 @@
 </head>
 <body id="body">
     <div class="container max900 center" style="max-width:600px">
-        <h2>{{ .Motd }}</h2>
+        <h2 class="glass lifted padded fill">{{ .Motd }}</h2>
         {{ range $i, $cmd := .Commands }}
             <div class="glass lifted padded fill">
                 <h4>{{ $cmd.Name }}</h4>

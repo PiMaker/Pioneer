@@ -59,6 +59,7 @@ var (
 const pioneerAccessToken = "pioneer-access-token"
 
 func main() {
+    fmt.Println(time.Now().String() + " [INFO] Pioneer starting...")
     loadConfig()
     commands.ParseCommands(config)
     
@@ -66,6 +67,7 @@ func main() {
         exec.Command(liveBackground.command, liveBackground.commandArgs...)
         ticker := time.NewTicker(time.Duration(liveBackground.interval) * time.Second)
         go func() {
+            fmt.Println(time.Now().String() + " [INFO] Starting live background ticker...")
             for {
                 <-ticker.C
                 invalidateCookies()
@@ -74,8 +76,11 @@ func main() {
                 }
             }
         }()
+    } else {
+        fmt.Println(time.Now().String() + " [INFO] Live background disabled, no action taken.")
     }
     
+    fmt.Println(time.Now().String() + " [INFO] Loading models...")
     templateModels = make(map[string]TemplateModel)
     for user := range users {
         templateModels[user] = TemplateModel{Motd: config["motd"].(string), Commands: getCommandsForUser(user),
@@ -84,6 +89,7 @@ func main() {
     
     templateCollection = template.Must(template.ParseFiles("html/login.html", "html/main.html"))
     
+    fmt.Println(time.Now().String() + " [INFO] Registering handlers...")
     http.HandleFunc("/login", loginHandler)
     http.HandleFunc("/main", mainHandler)
     http.HandleFunc("/api/", apiHandler)
@@ -100,7 +106,7 @@ func main() {
         err = http.ListenAndServeTLS(":443", config["certFile"].(string), config["keyFile"].(string), nil)
     } else {
         fmt.Println("Starting http server...")
-        fmt.Println("[WARNING] SSL encryption disabled! This is not recommended, as securely logging in is not possible without it!")
+        fmt.Println(time.Now().String() + " [WARN] SSL encryption disabled! This is not recommended, as secure connections are not possible without it!")
         err = http.ListenAndServe(":80", nil)
     }
     
@@ -119,6 +125,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
     err := templateCollection.ExecuteTemplate(w, "login.html", nil)
     if err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
     }
 }
 
@@ -156,8 +163,16 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
             validTokens = append(validTokens, Token{cookie: cookie, username: username})
             http.SetCookie(w, cookie)
             fmt.Fprintln(w, u.String())
+            fmt.Println(time.Now().String() + " [INFO] User " + username + " logged in, received token: " + u.String() + " (valid until " + cookie.Expires.String() + ")")
         } else {
             http.Error(w, "Wrong login!", 403)
+            var unameUsed string
+            if error == nil {
+                unameUsed = string(body)
+            } else {
+                unameUsed = "<Invalid Message Body>"
+            }
+            fmt.Println(time.Now().String() + " [INFO] Unsuccessful login attempt: " + unameUsed)
         }
         
         break
@@ -231,6 +246,7 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
         
         cmd, ok := commands.CommandsAvailable[id]
         if ok && in(cmd.AllowedUsers, token.username) {
+            fmt.Println(time.Now().String() + " [INFO] Executing command: " + cmd.Name)
             retval := cmd.ExecutableCommand.Execute(string(body))
             fmt.Fprint(w, retval)
             return
@@ -256,7 +272,6 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 
         b := bytes.NewBuffer(streamBytes)
         
-        //w.Header().Set("Content-type", "application/pdf")
         _, writeerr := b.WriteTo(w)
         
         if writeerr != nil {
@@ -329,7 +344,8 @@ func invalidateCookies() {
 }
 
 func loadConfig() {
-    fmt.Println("Parsing config...")
+    fmt.Println(time.Now().String() + " [INFO] Parsing config.json...")
+    
     var v interface{}
     f, _ := os.Open("config.json")
     r := JsonConfigReader.New(f)
@@ -341,7 +357,7 @@ func loadConfig() {
     for _, us := range u {
         use := us.(map[string]interface{})
         uname := use["username"].(string)
-        users[uname] = User{username: uname, password: use["password"].(string), statusAccess: use["status_access"].(bool)}
+        users[uname] = User{username: uname, password: use["password"].(string)}
     }
     
     lbc := config["live_background"].(map[string]interface{})
@@ -354,6 +370,8 @@ func loadConfig() {
         interval: int(lbc["interval"].(float64)),
         users: toStringSlice(lbc["users"].([]interface{})),
         enabled: lbc["enabled"].(bool) }
+        
+    fmt.Println(time.Now().String() + " [INFO] Config parsed and loaded.")
 }
 
 func toStringSlice(input []interface{}) []string {
