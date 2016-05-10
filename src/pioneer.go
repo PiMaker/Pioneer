@@ -116,6 +116,7 @@ func main() {
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Access-Control-Allow-Origin", "*")
     cookie, cerr := r.Cookie(pioneerAccessToken)
     valid, _ := cookieIsValid(cookie)
     if cerr == nil && valid {
@@ -130,6 +131,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func mainHandler(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Access-Control-Allow-Origin", "*")
     cookie, err := r.Cookie(pioneerAccessToken)
     valid, token := cookieIsValid(cookie)
     if err != nil || !valid {
@@ -144,6 +146,7 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func apiHandler(w http.ResponseWriter, r *http.Request) {
+    //w.Header().Set("Access-Control-Allow-Origin", "*")
     command := r.URL.Path[len("/api/"):]
     slashIndex := strings.Index(command, "/")
     if slashIndex != -1 {
