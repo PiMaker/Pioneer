@@ -90,22 +90,23 @@ func main() {
     templateCollection = template.Must(template.ParseFiles("html/login.html", "html/main.html"))
     
     fmt.Println(time.Now().String() + " [INFO] Registering handlers...")
-    http.HandleFunc("/login", loginHandler)
+    http.HandleFunc("/", loginHandler)
     http.HandleFunc("/main", mainHandler)
     http.HandleFunc("/api/", apiHandler)
     http.Handle("/js/", http.FileServer(http.Dir("./assets")))
     http.Handle("/css/", http.FileServer(http.Dir("./assets")))
     http.Handle("/img/", http.FileServer(http.Dir("./assets")))
-    http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request){
-        http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
-    })
+    //http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+    //    w.Header().Set("Access-Control-Allow-Origin", "*")
+    //    http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
+    //})
     
     var err interface{}
     if strings.ToLower(config["ssl"].(string)) == "true" {
-        fmt.Println("Starting https server...")
+        fmt.Println(time.Now().String() + " [INFO] Starting https server...")
         err = http.ListenAndServeTLS(":443", config["certFile"].(string), config["keyFile"].(string), nil)
     } else {
-        fmt.Println("Starting http server...")
+        fmt.Println(time.Now().String() + " [INFO] Starting http server...")
         fmt.Println(time.Now().String() + " [WARN] SSL encryption disabled! This is not recommended, as secure connections are not possible without it!")
         err = http.ListenAndServe(":80", nil)
     }
@@ -135,7 +136,7 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
     cookie, err := r.Cookie(pioneerAccessToken)
     valid, token := cookieIsValid(cookie)
     if err != nil || !valid {
-        http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
+        http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
         return
     }
     
@@ -361,6 +362,7 @@ func loadConfig() {
         use := us.(map[string]interface{})
         uname := use["username"].(string)
         users[uname] = User{username: uname, password: use["password"].(string)}
+        fmt.Println(time.Now().String() + " [INFO] User added: " + uname)
     }
     
     lbc := config["live_background"].(map[string]interface{})
