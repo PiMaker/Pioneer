@@ -73,7 +73,7 @@ func main() {
                 <-ticker.C
                 invalidateCookies()
                 if len(validTokens) > 0 {
-                    exec.Command(liveBackground.command, liveBackground.commandArgs...)
+                    exec.Command(liveBackground.command, liveBackground.commandArgs...).Start()
                 }
             }
         }()
