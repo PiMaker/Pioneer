@@ -25,6 +25,7 @@ type TemplateModel struct {
     LiveBackground bool
     LiveBackgroundInterval int
     Commands []commands.DisplayCommand
+    SchedulerEnabled bool
 }
 
 type Token struct {
@@ -35,7 +36,7 @@ type Token struct {
 type User struct {
     username string
     password string
-    statusAccess bool
+    scheduler bool
 }
 
 type LiveBackgroundSettings struct {
@@ -84,22 +85,20 @@ func main() {
     templateModels = make(map[string]TemplateModel)
     for user := range users {
         templateModels[user] = TemplateModel{Motd: config["motd"].(string), Commands: getCommandsForUser(user),
-            LiveBackground: liveBackground.enabled && in(liveBackground.users, user), LiveBackgroundInterval: liveBackground.interval}
+            LiveBackground: liveBackground.enabled && in(liveBackground.users, user), LiveBackgroundInterval: liveBackground.interval,
+            SchedulerEnabled: users[user].scheduler}
     }
     
-    templateCollection = template.Must(template.ParseFiles("html/login.html", "html/main.html"))
+    templateCollection = template.Must(template.ParseFiles("html/login.html", "html/main.html", "html/time.html"))
     
     fmt.Println(time.Now().String() + " [INFO] Registering handlers...")
     http.HandleFunc("/", loginHandler)
     http.HandleFunc("/main", mainHandler)
+    http.HandleFunc("/time", timeHandler)
     http.HandleFunc("/api/", apiHandler)
     http.Handle("/js/", http.FileServer(http.Dir("./assets")))
     http.Handle("/css/", http.FileServer(http.Dir("./assets")))
     http.Handle("/img/", http.FileServer(http.Dir("./assets")))
-    //http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-    //    w.Header().Set("Access-Control-Allow-Origin", "*")
-    //    http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
-    //})
     
     var err interface{}
     if strings.ToLower(config["ssl"].(string)) == "true" {
@@ -141,6 +140,21 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
     }
     
     terr := templateCollection.ExecuteTemplate(w, "main.html", templateModels[token.username])
+    if terr != nil {
+        http.Error(w, terr.Error(), http.StatusInternalServerError)
+    }
+}
+
+func timeHandler(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Access-Control-Allow-Origin", "*")
+    cookie, err := r.Cookie(pioneerAccessToken)
+    valid, token := cookieIsValid(cookie)
+    if err != nil || !valid {
+        http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+        return
+    }
+    
+    terr := templateCollection.ExecuteTemplate(w, "time.html", templateModels[token.username])
     if terr != nil {
         http.Error(w, terr.Error(), http.StatusInternalServerError)
     }
@@ -361,7 +375,7 @@ func loadConfig() {
     for _, us := range u {
         use := us.(map[string]interface{})
         uname := use["username"].(string)
-        users[uname] = User{username: uname, password: use["password"].(string)}
+        users[uname] = User{username: uname, password: use["password"].(string), scheduler: use["scheduler"].(bool)}
         fmt.Println(time.Now().String() + " [INFO] User added: " + uname)
     }
     

@@ -3,19 +3,26 @@
 <head>
     <meta charset="utf-8">
     <title>Pioneer</title>
-    <link rel="stylesheet" href="css/stupid.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.6/css/materialize.min.css">
 </head>
 <body>
-    <div class="container max900 center" style="max-width:22rem">
-        <h3>Welcome to Pioneer!</h3>
-        <p class="center">Please enter your credentials:</p>
-        <form action="javascript:void(0);">
-            <input type="text" id="usernameField" autofocus placeholder="username"/>
-            <input type="password" id="passwordField" placeholder="password"/>
-            <button class="btn rounded center" onclick="login()" style="margin-top: 1em" type="submit">Login!</button>
-        </form>
-        <p id="errorText" style="display:none;color:red;">Please try again!</p>
+    <div class="container">
+        <div class="row">
+            <div class="col center s12 m12 l6 offset-l3 flow-text">
+                <h3>Welcome to Pioneer!</h3>
+                <h5>Please enter your credentials:</h5>
+                <form action="javascript:void(0);">
+                    <input type="text" id="usernameField" autofocus placeholder="username"/>
+                    <input type="password" id="passwordField" placeholder="password"/>
+                    <button class="btn-large waves-effect waves-light teal" onclick="login()" style="margin-top: 1em" type="submit">Login!</button>
+                </form>
+                <p id="errorText" style="display:none;color:red;">Please try again!</p>
+            </div>
+        </div>
     </div>
+    
+    <script type="text/javascript" src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.6/js/materialize.min.js"></script>
     <script src="js/login.js"></script>
 </body>
 </html>

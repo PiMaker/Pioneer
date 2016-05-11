@@ -15,11 +15,13 @@
     "users": [
         {
             "username": "pi",
-            "password": "Passw0rd"
+            "password": "Passw0rd",
+            "scheduler": true
         },
         {
             "username": "restricted",
-            "password": "Passw0rd"
+            "password": "Passw0rd",
+            "scheduler": false
         }
     ],
     "commands": [

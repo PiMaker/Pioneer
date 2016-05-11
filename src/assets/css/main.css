@@ -22,8 +22,3 @@ body.loading {
 body.loading .loader {
     display: block;
 }
-
-.glass {
-    margin-top: 2em;
-    background-color: white !important;
-}

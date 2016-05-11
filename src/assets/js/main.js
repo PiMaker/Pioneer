@@ -39,9 +39,9 @@ function logout() {
 }
 function popup(text) {
     document.getElementById("popup-content").innerHTML = text.replace("\n", "<br></br>");
-    document.getElementById("popup").style = "opacity: 1; visibility: visible;";
+    $("#popup").openModal();
 }
 
 function closepopup() {
-    document.getElementById("popup").style = "opacity: 0; visibility: collapsed;";
+    $("#popup").closeModal();
 }

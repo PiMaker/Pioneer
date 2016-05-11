@@ -3,39 +3,51 @@
 <head>
     <meta charset="utf-8">
     <title>Pioneer</title>
-    <link rel="stylesheet" href="css/stupid.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.6/css/materialize.min.css">
     <link rel="stylesheet" href="css/main.css">
 </head>
 <body id="body">
-    <div class="container max900 center" style="max-width:600px">
-        <h2 class="glass lifted padded fill">{{ .Motd }}</h2>
-        {{ range $i, $cmd := .Commands }}
-            <div class="glass lifted padded fill">
-                <h4>{{ $cmd.Name }}</h4>
-                <p>{{ $cmd.Description }}</p>
+    <div class="container">
+        <div class="row">
+            <div class="col center s12 m12 l6 offset-l3">
+                <h3 class="white z-depth-1" style="padding:0.4em">{{ .Motd }}</h3>
                 
-                {{ if $cmd.IsBasic }}
-                <button class="btn rounded center" onclick="cmd({{ $cmd.ID }})" style="margin-top: 1em">Trigger</button>
+                {{ range $i, $cmd := .Commands }}
+                <div class="card">
+                    <div class="card-content">
+                        <span class="card-title">{{ $cmd.Name }}</span>
+                        <p>{{ $cmd.Description }}</p>
+                    </div>
+                    <div class="card-action">
+                        
+                        {{ if $cmd.IsBasic }}
+                        <button class="btn waves-effect waves-light teal" onclick="cmd({{ $cmd.ID }})">Trigger</button>
+                        {{ end }}
+                        
+                        {{ if $cmd.IsToggle }}
+                        <button class="btn waves-effect waves-light green" onclick="cmd({{ $cmd.ID }}, 'on')">On</button>
+                        <button class="btn waves-effect waves-light red" onclick="cmd({{ $cmd.ID }}, 'off')">Off</button>
+                        {{ end }}
+                    
+                    </div>
+                </div>
                 {{ end }}
                 
-                {{ if $cmd.IsToggle }}
-                <button class="btn rounded center green" onclick="cmd({{ $cmd.ID }}, 'on')" style="margin-top: 1em">On</button>
-                <button class="btn rounded center red" onclick="cmd({{ $cmd.ID }}, 'off')" style="margin-top: 1em">Off</button>
+                {{ if .SchedulerEnabled }}
+                <a class="btn waves-effect waves-light teal"href="/time">Go to Scheduler</a>
                 {{ end }}
-                
+                <button class="btn waves-effect waves-light red" onclick="logout()">Logout</button>
             </div>
-        {{ end }}
-        <button class="btn rounded center red" onclick="logout()" style="margin-top: 4em">Logout</button>
+        </div>
     </div>
     <div class="modal" id="popup">
-      <div class="twothirds rounded white padded relative">
-        <a class="close" onclick="closepopup()">×</a>
-        <h4>Response</h4>
-        <p style="font-size: 1.5em; margin-top: 1em;" id="popup-content"></p>
-        <div class="right">
-          <a class="close btn" onclick="closepopup()">Close</a>
+        <div class="modal-content">
+            <h4>Response</h4>
+            <p id="popup-content"></p>
         </div>
-      </div>
+        <div class="modal-footer">
+            <a class="modal-action modal-close waves-effect waves-teal btn" onclick="closepopup()">Close</a>
+        </div>
     </div>
     <div class="loader"></div>
     <script src="js/main.js"></script>
@@ -43,5 +55,8 @@
     <script>livebckinterval = {{ .LiveBackgroundInterval }} * 1000</script>
     <script src="js/livebck.js"></script>
     {{ end }}
+    
+    <script type="text/javascript" src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.6/js/materialize.min.js"></script>
 </body>
 </html>
