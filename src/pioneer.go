@@ -4,7 +4,8 @@ import (
     "./commands"
     
     "net/http"
-    "html/template"
+    //"html/template"
+    "github.com/gernest/hot"
     "fmt"
     "github.com/twinj/uuid"
     "time"
@@ -49,7 +50,7 @@ type LiveBackgroundSettings struct {
 }
 
 var (
-    templateCollection *template.Template
+    templateCollection *hot.Template
     validTokens []Token
     config commands.JsonObject
     users map[string]User
@@ -89,7 +90,16 @@ func main() {
             SchedulerEnabled: users[user].scheduler}
     }
     
-    templateCollection = template.Must(template.ParseFiles("html/login.html", "html/main.html", "html/time.html"))
+    var temerr error
+    templateCollection, temerr = hot.New(&hot.Config{
+        Watch:          true,
+        BaseName:       "hot",
+        Dir:            "html",
+        FilesExtension: []string{".html"},
+    })
+    if temerr != nil {
+        panic(temerr)
+    }
     
     fmt.Println(time.Now().String() + " [INFO] Registering handlers...")
     http.HandleFunc("/", loginHandler)
@@ -123,7 +133,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
         http.Redirect(w, r, "/main", http.StatusTemporaryRedirect)
         return
     }
-    err := templateCollection.ExecuteTemplate(w, "login.html", nil)
+    err := templateCollection.Execute(w, "login.html", nil)
     if err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return
@@ -139,7 +149,7 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
         return
     }
     
-    terr := templateCollection.ExecuteTemplate(w, "main.html", templateModels[token.username])
+    terr := templateCollection.Execute(w, "main.html", templateModels[token.username])
     if terr != nil {
         http.Error(w, terr.Error(), http.StatusInternalServerError)
     }
@@ -154,7 +164,7 @@ func timeHandler(w http.ResponseWriter, r *http.Request) {
         return
     }
     
-    terr := templateCollection.ExecuteTemplate(w, "time.html", templateModels[token.username])
+    terr := templateCollection.Execute(w, "time.html", templateModels[token.username])
     if terr != nil {
         http.Error(w, terr.Error(), http.StatusInternalServerError)
     }

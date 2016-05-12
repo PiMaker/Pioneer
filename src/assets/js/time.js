@@ -44,7 +44,7 @@ noUiSlider.create(timeSlider, {
         min: 0,
         max: 60*24
     },
-    step: 15,
+    step: 1,
     start: [ 17*60, 22*60+30 ],
     connect: true,
     tooltips: [ false, false ],

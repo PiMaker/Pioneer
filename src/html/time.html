@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Pioneer</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.6/css/materialize.min.css">
     <link rel="stylesheet" href="css/nouislider.css">
@@ -46,17 +47,19 @@
                     </tbody>
                 </table>
             </div>
-            <div id="add" class="col center s12 m12 l6 offset-l3 flow-text">
+            <div id="add" class="col center s12 m12 l6 offset-l3">
                 <h4>Add event</h4>
                 <form action="#">
-                    <div class="row">
-                        <div class="col s2">From</div>
-                        <div class="col s4"><input id="dateFrom" type="date" class="datepicker"></div>
-                        <div class="col s2">to</div>
-                        <div class="col s4"><input id="dateTo" type="date" class="datepicker"></div>
+                    <div class="valign-wrapper center">
+                        <span class="grey-text valign col s2" style="margin:1em">From</span>
+                        <input id="dateFrom" type="date" class="datepicker col s10">
+                    </div>
+                    <div class="valign-wrapper">
+                        <span class="grey-text valign col s2" style="margin:1em">to</span>
+                        <input id="dateTo" type="date" class="datepicker col s10">
                     </div>
                     
-                    From <span id="timeStart">17:00</span> to <span id="timeEnd">22:30</span>
+                    <span class="">From</span> <span id="timeStart">17:00</span> to <span id="timeEnd">22:30</span>
                     <div id="timeSlider" style="margin-bottom:1.5em;margin-top:0.5em;"></div>
                     
                     <p class="center">Dynamic?</p>
