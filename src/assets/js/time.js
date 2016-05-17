@@ -37,37 +37,30 @@ dateFrom.pickadate({
 var dateFromPicka = dateFrom.pickadate('picker');
 var dateToPicka = dateTo.pickadate('picker');
 
-var timeSlider = document.getElementById('timeSlider');
+// Check time compatibility
 
-noUiSlider.create(timeSlider, {
-    range: {
-        min: 0,
-        max: 60*24
-    },
-    step: 1,
-    start: [ 17*60, 22*60+30 ],
-    connect: true,
-    tooltips: [ false, false ],
-    margin: 15,
-    format: wNumb({
-		decimals: 0
-	})
-});
-
-function getTime(minutes) {
-    minutes = Math.round(minutes);
-    mins = minutes % 60;
-    hour = (minutes-mins)/60;
-    return (hour < 10 ? "0" + hour : hour) + ":" + (mins < 10 ? "0" + mins : mins);
+function timeFallback() {
+    $(".timepickerjs").timepicker({ 'step': 1, 'timeFormat': 'H:i' });
 }
 
-var timeValues = [
-	document.getElementById('timeStart'),
-	document.getElementById('timeEnd')
-];
+try {
+    var input = document.createElement("input");
+    input.type = "time";
 
-timeSlider.noUiSlider.on('update', function(values, handle) {
-    if (handle < 2 && values[handle] !== null) {
-	    timeValues[handle].innerHTML = getTime(+values[handle]);
+    if (input.type === "time") {
+        // Supported, set time type
+        $(".timepickerjs").attr("type", "time");
+    } else {
+        timeFallback();
     }
-});
+} catch(e) {
+    timeFallback();
+}
+
+function closepopup() {
+    $("#popup").closeModal();
+}
+
+function schedule() {
+    $("#popup").openModal();
+}

@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Pioneer</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.6/css/materialize.min.css">
-    <link rel="stylesheet" href="css/nouislider.css">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="css/jquery.timepicker.css">
 </head>
 <body>
     <div class="container">
@@ -49,6 +49,7 @@
             </div>
             <div id="add" class="col center s12 m12 l6 offset-l3">
                 <h4>Add event</h4>
+                <br />
                 <form action="#">
                     <div class="valign-wrapper center">
                         <span class="grey-text valign col s2" style="margin:1em">From</span>
@@ -59,9 +60,22 @@
                         <input id="dateTo" type="date" class="datepicker col s10">
                     </div>
                     
-                    <span class="">From</span> <span id="timeStart">17:00</span> to <span id="timeEnd">22:30</span>
-                    <div id="timeSlider" style="margin-bottom:1.5em;margin-top:0.5em;"></div>
+                    <br />
+                    <span>Date</span>
+                    <hr />
+                    <span>Time</span>
+                    <br /><br />
                     
+                    <div class="valign-wrapper center">
+                        <span class="grey-text valign col s2" style="margin:1em">From</span>
+                        <input id="timeFrom" type="text" class="timepickerjs col s10 validate" placeholder="17:00" pattern="^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$">
+                    </div>
+                    <div class="valign-wrapper">
+                        <span class="grey-text valign col s2" style="margin:1em">to</span>
+                        <input id="timeTo" type="text" class="timepickerjs datepicker col s10 validate" placeholder="22:30" pattern="^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$">
+                    </div>
+                    
+                    <br />
                     <p class="center">Dynamic?</p>
                     <div class="switch">
                         <label>
@@ -71,7 +85,8 @@
                             Dynamic (more realistic)
                         </label>
                     </div>
-                    <button class="btn-large waves-effect waves-light teal center" style="margin-top:1.5em">Save</button>
+                    <br />
+                    <button class="btn-large waves-effect waves-light teal center" style="margin-top:1.5em" type="submit" onclick="schedule()">Save</button>
                 </form>
             </div>
         </div>
@@ -79,8 +94,8 @@
     
     <div class="modal" id="popup">
         <div class="modal-content">
-            <h4>Saved!</h4>
-            <p id="popup-content">Your event has been scheduled successfully.</p>
+            <h4>Success!</h4>
+            <p id="popup-content">Your event has been scheduled successfully. You can now continue to schedule other events or see your already planned ones under the info tab.</p>
         </div>
         <div class="modal-footer">
             <a class="modal-action modal-close waves-effect waves-teal btn" onclick="closepopup()">Close</a>
@@ -89,7 +104,7 @@
     
     <script type="text/javascript" src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.6/js/materialize.min.js"></script>
-    <script src="js/nouislider.min.js"></script>
-    <script src="js/time.js"></script>
+    <script type="text/javascript" src="js/jquery.timepicker.min.js"></script>
+    <script type="text/javascript" src="js/time.js"></script>
 </body>
 </html>
