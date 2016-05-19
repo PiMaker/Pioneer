@@ -3,19 +3,17 @@ package main
 import (
     "./commands"
     
-    "net/http"
-    //"html/template"
     "github.com/gernest/hot"
-    "fmt"
+    "github.com/DisposaBoy/JsonConfigReader"
     "github.com/twinj/uuid"
-    "time"
     
+    "fmt"
+    "time"
     "os"
     "os/exec"
+    "net/http"
     "io/ioutil"
     "encoding/json"
-    "github.com/DisposaBoy/JsonConfigReader"
-    
     "strings"
     "strconv"
 	"bytes"
@@ -64,6 +62,22 @@ func main() {
     fmt.Println(time.Now().String() + " [INFO] Pioneer starting...")
     loadConfig()
     commands.ParseCommands(config)
+    
+    fmt.Println(time.Now().String() + " [INFO] Loading persistance database...")
+    commands.InitScheduling()
+    
+    // DEBUG!!!
+    commands.ScheduleCommand(&commands.Scheduling{
+        StartDate: time.Date(2016, 1, 1, 0, 0, 0, 0, time.Local),
+        EndDate: time.Date(2016, 1, 1, 0, 0, 0, 0, time.Local),
+        StartTime: time.Date(0, 0, 0, 20, 11, 0, 0, time.Local),
+        EndTime: time.Date(0, 0, 0, 20, 12, 0, 0, time.Local),
+        Dynamic: false,
+        CommandOn: "echo",
+        CommandOnArgs: []string {"Hell, yeah!"},
+        CommandOff: "echo",
+        CommandOffArgs: []string {"WTF?!"},
+    })
     
     if liveBackground.enabled {
         exec.Command(liveBackground.command, liveBackground.commandArgs...)
