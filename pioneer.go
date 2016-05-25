@@ -1,7 +1,7 @@
 package main
 
 import (
-    "./commands"
+    "github.com/PiMaker/Pioneer/commands"
     
     "github.com/gernest/hot"
     "github.com/DisposaBoy/JsonConfigReader"
@@ -67,11 +67,11 @@ func main() {
     commands.InitScheduling()
     
     // DEBUG!!!
-    commands.ScheduleCommand(&commands.Scheduling{
-        StartDate: time.Date(2016, 1, 1, 0, 0, 0, 0, time.Local),
-        EndDate: time.Date(2016, 1, 1, 0, 0, 0, 0, time.Local),
-        StartTime: time.Date(0, 0, 0, 20, 11, 0, 0, time.Local),
-        EndTime: time.Date(0, 0, 0, 20, 12, 0, 0, time.Local),
+    commands.ScheduleCommand(commands.Scheduling{
+        StartDate: time.Now(),
+        EndDate: time.Now(),
+        StartTime: time.Date(0, 0, 0, time.Now().Add(time.Duration(10) * time.Second).Hour(), time.Now().Add(time.Duration(10) * time.Second).Minute(), time.Now().Add(time.Duration(10) * time.Second).Second(), 0, time.Local),
+        EndTime: time.Date(0, 0, 0, time.Now().Add(time.Duration(30) * time.Second).Hour(), time.Now().Add(time.Duration(30) * time.Second).Minute(), time.Now().Add(time.Duration(30) * time.Second).Second(), 0, time.Local),
         Dynamic: false,
         CommandOn: "echo",
         CommandOnArgs: []string {"Hell, yeah!"},
@@ -88,7 +88,10 @@ func main() {
                 <-ticker.C
                 invalidateCookies()
                 if len(validTokens) > 0 {
-                    exec.Command(liveBackground.command, liveBackground.commandArgs...).Start()
+                    cmd := exec.Command(liveBackground.command, liveBackground.commandArgs...)
+                    if err := cmd.Start(); err == nil {
+                        cmd.Wait()
+                    }
                 }
             }
         }()
@@ -205,7 +208,7 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
             validTokens = append(validTokens, Token{cookie: cookie, username: username})
             http.SetCookie(w, cookie)
             fmt.Fprintln(w, u.String())
-            fmt.Println(time.Now().String() + " [INFO] User " + username + " logged in, received token: " + u.String() + " (valid until " + cookie.Expires.String() + ")")
+            fmt.Println(time.Now().String() + " [API] User " + username + " logged in, received token: " + u.String() + " (valid until " + cookie.Expires.String() + ")")
         } else {
             http.Error(w, "Wrong login!", 403)
             var unameUsed string
@@ -214,7 +217,7 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
             } else {
                 unameUsed = "<Invalid Message Body>"
             }
-            fmt.Println(time.Now().String() + " [INFO] Unsuccessful login attempt: " + unameUsed)
+            fmt.Println(time.Now().String() + " [API] Unsuccessful login attempt: " + unameUsed)
         }
         
         break
@@ -288,9 +291,67 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
         
         cmd, ok := commands.CommandsAvailable[id]
         if ok && in(cmd.AllowedUsers, token.username) {
-            fmt.Println(time.Now().String() + " [INFO] Executing command: " + cmd.Name)
+            fmt.Println(time.Now().String() + " [API] Executing command: " + cmd.Name)
             retval := cmd.ExecutableCommand.Execute(string(body))
             fmt.Fprint(w, retval)
+            return
+        }
+        
+        http.Error(w, "Command not found", 404)
+        
+        break
+    case "schedule":
+        if r.Method != "POST" {
+            http.Error(w, "You can only POST to this api!", http.StatusBadRequest)
+            return
+        }
+        cookie, err := r.Cookie(pioneerAccessToken)
+        valid, token := cookieIsValid(cookie)
+        if err != nil || !valid {
+            http.Error(w, "Unauthorized", 403)
+            return
+        }
+        
+        _, err = ioutil.ReadAll(r.Body) // HERE BE BODY UNICORNS
+        if err != nil {
+            http.Error(w, "Parameter error", 500)
+            return
+        }
+        
+        origCmd := r.URL.Path[len("/api/"):]
+        if len(origCmd) < 5 {
+            http.Error(w, "Parameter error", 500)
+            return
+        }
+        
+        id, serr := strconv.Atoi(origCmd[slashIndex + 1:])
+        if serr != nil {
+            http.Error(w, "Parameter error", 500)
+            return
+        }
+        
+        cmd, ok := commands.CommandsAvailable[id]
+        if ok && in(cmd.AllowedUsers, token.username) {
+            fmt.Println(time.Now().String() + " [API] Scheduling command: " + cmd.Name)
+            
+            scherr := commands.ScheduleCommand(commands.Scheduling{
+                StartDate: time.Now(),
+                EndDate: time.Now(),
+                StartTime: time.Date(0, 0, 0, time.Now().Add(time.Duration(10) * time.Second).Hour(), time.Now().Add(time.Duration(10) * time.Second).Minute(), time.Now().Add(time.Duration(10) * time.Second).Second(), 0, time.Local),
+                EndTime: time.Date(0, 0, 0, time.Now().Add(time.Duration(30) * time.Second).Hour(), time.Now().Add(time.Duration(30) * time.Second).Minute(), time.Now().Add(time.Duration(30) * time.Second).Second(), 0, time.Local),
+                Dynamic: false,
+                CommandOn: "echo",
+                CommandOnArgs: []string {"Hell, yeah!"},
+                CommandOff: "echo",
+                CommandOffArgs: []string {"WTF?!"},
+            })
+            
+            if scherr == nil {
+                fmt.Fprint(w, scherr.Error())
+            } else {
+                fmt.Fprint(w, "Entry created, your scheduling has been accepted! You can now schedule further commands or check the info tab for a list of schedulings.")
+            }
+            
             return
         }
         

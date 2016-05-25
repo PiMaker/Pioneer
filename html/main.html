@@ -26,6 +26,9 @@
                         {{ end }}
                         
                         {{ if $cmd.IsToggle }}
+                            {{ if $.SchedulerEnabled }}
+                            <a class="btn waves-effect waves-light teal" href="/time">Go to Scheduler</a>
+                            {{ end }}
                         <button class="btn waves-effect waves-light green" onclick="cmd({{ $cmd.ID }}, 'on')">On</button>
                         <button class="btn waves-effect waves-light red" onclick="cmd({{ $cmd.ID }}, 'off')">Off</button>
                         {{ end }}
@@ -34,9 +37,6 @@
                 </div>
                 {{ end }}
                 
-                {{ if .SchedulerEnabled }}
-                <a class="btn-large waves-effect waves-light teal"href="/time">Go to Scheduler</a>
-                {{ end }}
                 <button class="btn-large waves-effect waves-light red" onclick="logout()">Logout</button>
             </div>
         </div>

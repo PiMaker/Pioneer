@@ -8,6 +8,7 @@ import (
     "strings"
     "os/exec"
     "os/signal"
+    "math/rand"
     "database/sql"
     
     // SQLite init
@@ -29,12 +30,16 @@ type Scheduling struct {
     ExecutedOff bool    
 }
 
-const MINUTES_TO_RETRY = 2
+const SECONDS_TIMING = 6
+const RANDOM_RANGE = 3
 
 var db *sql.DB
 var scheduledCommands []*Scheduling
 
 func InitScheduling() {
+    // DEBUG
+    os.Remove("./pioneer.db")
+    
     var err error
     db, err = sql.Open("sqlite3", "./pioneer.db")
     if err != nil {
@@ -71,16 +76,31 @@ func InitScheduling() {
     scheduleWorker()
 }
 
-func ScheduleCommand(scheduling *Scheduling) (success bool, err error) {
-    // TODO: Check for collisions
-    if false {
-        return false, errors.New("Collision with XYZ!")
+func ScheduleCommand(scheduling Scheduling) error {
+    fmt.Println(time.Now().String() + " [SCHED] Starting to schedule something...")
+    
+    scheduling.EndDate = time.Date(scheduling.EndDate.Year(), scheduling.EndDate.Month(), scheduling.EndDate.Day(), 23, 59, 59, 999999999, time.Local)
+    
+    for _, sch := range scheduledCommands {
+        if (scheduling.StartDate.Before(sch.StartDate) && scheduling.EndDate.After(sch.StartDate)) ||
+           (scheduling.EndDate.After(sch.EndDate) && scheduling.StartDate.Before(sch.EndDate)) ||
+           (scheduling.StartDate.Before(sch.StartDate) && scheduling.EndDate.After(sch.EndDate)) {
+               // Gotta check time
+                if (scheduling.StartTime.Before(sch.StartTime) && scheduling.EndTime.After(sch.StartTime)) ||
+                   (scheduling.EndTime.After(sch.EndTime) && scheduling.StartTime.Before(sch.EndTime)) ||
+                   (scheduling.StartTime.Before(sch.StartTime) && scheduling.EndTime.After(sch.EndTime)) {
+                    // Oh noes!
+                    return errors.New("This entry would collide with a different scheduled command! Scheduling not commited, please try again.")
+                }
+           }
     }
     
+    scheduledCommands = append(scheduledCommands, &scheduling)
     saveExec("INSERT INTO scheduling (startDate, endDate, startTime, endTime, dynamic, commandOn, commandOnArgs, commandOff, commandOffArgs, executedOn, executedOff) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1)",
         scheduling.StartDate, scheduling.EndDate, scheduling.StartTime, scheduling.EndTime, scheduling.Dynamic, scheduling.CommandOn, schedulingArgsToString(scheduling.CommandOnArgs), scheduling.CommandOff, schedulingArgsToString(scheduling.CommandOffArgs))
     
-    return true, nil
+    fmt.Println(time.Now().String() + " [SCHED] Scheduled something.")
+    return nil
 }
 
 func schedulingArgsToString(in []string) string {
@@ -106,7 +126,7 @@ func closeScheduling() {
 }
 
 func scheduleWorker() {
-    ticker := time.NewTicker(time.Duration(5) * time.Second)
+    ticker := time.NewTicker((time.Duration(SECONDS_TIMING) / 3) * time.Second)
     go func () {
         for {
             <-ticker.C
@@ -115,24 +135,34 @@ func scheduleWorker() {
                 if sch.StartDate.Before(now) && sch.EndDate.After(now) {
                     // Inside date range
                     timeComparerNow := time.Date(0, 0, 0, now.Hour(), now.Minute(), now.Second(), now.Nanosecond(), now.Location())
-                    if sch.StartTime.Before(timeComparerNow) && sch.EndTime.Add(time.Duration(MINUTES_TO_RETRY) * time.Minute).After(timeComparerNow) {
+                    if sch.StartTime.Before(timeComparerNow) && sch.EndTime.Add(time.Duration(SECONDS_TIMING) * time.Second).After(timeComparerNow) {
                         // In general time range
-                        if !sch.ExecutedOn && sch.StartTime.Before(timeComparerNow) && sch.StartTime.Add(time.Duration(MINUTES_TO_RETRY) * time.Minute).After(timeComparerNow) {
+                        if !sch.ExecutedOn && sch.StartTime.Before(timeComparerNow) && sch.StartTime.Add(time.Duration(SECONDS_TIMING) * time.Second).After(timeComparerNow) {
                             // Should start
                             execOn(sch)
                             sch.ExecutedOn = true
                             sch.ExecutedOff = false
-                            saveExec("UPDATE scheduling s SET s.executedOn=1, s.executedOff=0 WHERE s.id=?", sch.ID)
+                            saveExec("UPDATE scheduling SET executedOn=1, executedOff=0 WHERE id=?", sch.ID)
                         }
-                        if !sch.ExecutedOff && sch.EndTime.Before(timeComparerNow) && sch.EndTime.Add(time.Duration(MINUTES_TO_RETRY) * time.Minute).After(timeComparerNow) {
+                        if !sch.ExecutedOff && sch.EndTime.Before(timeComparerNow) && sch.EndTime.Add(time.Duration(SECONDS_TIMING) * time.Second).After(timeComparerNow) {
                             // Should stop
                             execOff(sch)
                             sch.ExecutedOff = true
                             sch.ExecutedOn = false
-                            saveExec("UPDATE scheduling s SET s.executedOn=0, s.executedOff=1 WHERE s.id=?", sch.ID)
+                            saveExec("UPDATE scheduling SET executedOn=0, executedOff=1 WHERE id=?", sch.ID)
                         }
-                        if sch.Dynamic && sch.ExecutedOn {
+                        if sch.Dynamic {
                             // Should randomize
+                            seed := rand.Int31n(RANDOM_RANGE)
+                            if seed == (RANDOM_RANGE/2) {
+                                if !sch.ExecutedOff && !sch.ExecutedOn {
+                                    sch.ExecutedOn = true
+                                    execOn(sch)
+                                } else {
+                                    sch.ExecutedOn = false
+                                    execOff(sch)
+                                }
+                            }
                         }
                     }
                 } else {
@@ -148,6 +178,7 @@ func scheduleWorker() {
 }
 
 func deleteScheduling(sch *Scheduling) {
+    fmt.Println(time.Now().String() + " [SCHED] Deleting a scheduling...")
     saveExec("DELETE FROM scheduling WHERE id=?", sch.ID)
     for i, value := range scheduledCommands {
         if value.ID == sch.ID {
@@ -160,12 +191,13 @@ func deleteScheduling(sch *Scheduling) {
 }
 
 func execOn(sch *Scheduling) {
-    fmt.Println("Executing something on!")
-    exec.Command(sch.CommandOn, sch.CommandOnArgs...).Start()
+    fmt.Println(time.Now().String() + " [SCHED] Activating a scheduling...")
+    _, _ = exec.Command(sch.CommandOn, sch.CommandOnArgs...).CombinedOutput()
 }
 
 func execOff(sch *Scheduling) {
-    exec.Command(sch.CommandOff, sch.CommandOffArgs...).Start()    
+    fmt.Println(time.Now().String() + " [SCHED] Deactivating a scheduling...")
+    _, _ = exec.Command(sch.CommandOff, sch.CommandOffArgs...).CombinedOutput()
 }
 
 func saveExec(cmd string, args ...interface{}) sql.Result {
