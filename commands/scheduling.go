@@ -103,6 +103,10 @@ func ScheduleCommand(scheduling Scheduling) error {
     return nil
 }
 
+func GetSchedulings() []*Scheduling {
+    return scheduledCommands
+}
+
 func schedulingArgsToString(in []string) string {
     retval := ""
     for i, val := range in {

@@ -64,3 +64,35 @@ function closepopup() {
 function schedule() {
     $("#popup").openModal();
 }
+
+// Scheduls list
+
+Date.prototype.formatDDMMYYYY = function() {
+    return this.getDate() + "." + (this.getMonth() + 1) + "." + this.getFullYear();
+}
+
+function timePretty(inp) {
+    while (inp.length < 2) {
+        inp = "0" + inp;
+    }
+    return inp;
+}
+
+Date.prototype.formathhmmss = function() {
+    return timePretty(this.getHours().toString()) + ":" + timePretty(this.getMinutes().toString()) + ":" + timePretty(this.getSeconds().toString());
+}
+
+function loadSchedules() {
+    $.getJSON("/api/getschedulings", function (json) {
+        var list = $("#infolist");
+        var html = "";
+        
+        json.forEach(function(element) {
+            html += '<tr><td>' + element.ID + '</td><td>' + new Date(element.StartDate).formatDDMMYYYY() + ' - ' + new Date(element.EndDate).formatDDMMYYYY() + '</td><td>' + new Date(element.StartTime).formathhmmss() + ' - ' + new Date(element.EndTime).formathhmmss() + '</td><td><button class="btn-floating waves-effect waves-light red">X</button></td></tr>';
+        }, this);
+        
+        list.html(html);
+    });
+}
+
+loadSchedules();

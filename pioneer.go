@@ -2,11 +2,11 @@ package main
 
 import (
     "github.com/PiMaker/Pioneer/commands"
-    
+
     "github.com/gernest/hot"
     "github.com/DisposaBoy/JsonConfigReader"
     "github.com/twinj/uuid"
-    
+
     "fmt"
     "time"
     "os"
@@ -16,7 +16,7 @@ import (
     "encoding/json"
     "strings"
     "strconv"
-	"bytes"
+    "bytes"
 )
 
 type TemplateModel struct {
@@ -66,18 +66,18 @@ func main() {
     fmt.Println(time.Now().String() + " [INFO] Loading persistance database...")
     commands.InitScheduling()
     
-    // DEBUG!!!
+    // DEBUG
     commands.ScheduleCommand(commands.Scheduling{
-        StartDate: time.Now(),
-        EndDate: time.Now(),
-        StartTime: time.Date(0, 0, 0, time.Now().Add(time.Duration(10) * time.Second).Hour(), time.Now().Add(time.Duration(10) * time.Second).Minute(), time.Now().Add(time.Duration(10) * time.Second).Second(), 0, time.Local),
-        EndTime: time.Date(0, 0, 0, time.Now().Add(time.Duration(30) * time.Second).Hour(), time.Now().Add(time.Duration(30) * time.Second).Minute(), time.Now().Add(time.Duration(30) * time.Second).Second(), 0, time.Local),
-        Dynamic: false,
-        CommandOn: "echo",
-        CommandOnArgs: []string {"Hell, yeah!"},
-        CommandOff: "echo",
-        CommandOffArgs: []string {"WTF?!"},
-    })
+                StartDate: time.Now(),
+                EndDate: time.Now(),
+                StartTime: time.Date(1, 1, 1, time.Now().Add(time.Duration(10) * time.Second).Hour(), time.Now().Add(time.Duration(10) * time.Second).Minute(), time.Now().Add(time.Duration(10) * time.Second).Second(), 0, time.Local),
+                EndTime: time.Date(1, 1, 1, time.Now().Add(time.Duration(30) * time.Second).Hour(), time.Now().Add(time.Duration(30) * time.Second).Minute(), time.Now().Add(time.Duration(30) * time.Second).Second(), 0, time.Local),
+                Dynamic: false,
+                CommandOn: "echo",
+                CommandOnArgs: []string {"Hell, yeah!"},
+                CommandOff: "echo",
+                CommandOffArgs: []string {"WTF?!"},
+            })
     
     if liveBackground.enabled {
         exec.Command(liveBackground.command, liveBackground.commandArgs...)
@@ -134,7 +134,7 @@ func main() {
     } else {
         fmt.Println(time.Now().String() + " [INFO] Starting http server...")
         fmt.Println(time.Now().String() + " [WARN] SSL encryption disabled! This is not recommended, as secure connections are not possible without it!")
-        err = http.ListenAndServe(":80", nil)
+        err = http.ListenAndServe(":88", nil)
     }
     
     if err != nil {
@@ -188,7 +188,7 @@ func timeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func apiHandler(w http.ResponseWriter, r *http.Request) {
-    //w.Header().Set("Access-Control-Allow-Origin", "*")
+    //w.Header().Set("Access-Control-Allow-Origin", "*") UNCOMMENT TO ALLOW API ACCESS FROM EVERYWHERE
     command := r.URL.Path[len("/api/"):]
     slashIndex := strings.Index(command, "/")
     if slashIndex != -1 {
@@ -237,6 +237,8 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
                 validTokens[i].cookie.Expires = time.Now().Add(-1 * time.Minute)
             }
         }
+        
+        fmt.Println(time.Now().String() + " [API] User logged out, Token (" + cookie.Value + ") revoked")
         
         break
     case "getcmds":
@@ -312,7 +314,7 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
             return
         }
         
-        _, err = ioutil.ReadAll(r.Body) // HERE BE BODY UNICORNS
+        body, err := ioutil.ReadAll(r.Body)
         if err != nil {
             http.Error(w, "Parameter error", 500)
             return
@@ -334,20 +336,17 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
         if ok && in(cmd.AllowedUsers, token.username) {
             fmt.Println(time.Now().String() + " [API] Scheduling command: " + cmd.Name)
             
-            scherr := commands.ScheduleCommand(commands.Scheduling{
-                StartDate: time.Now(),
-                EndDate: time.Now(),
-                StartTime: time.Date(0, 0, 0, time.Now().Add(time.Duration(10) * time.Second).Hour(), time.Now().Add(time.Duration(10) * time.Second).Minute(), time.Now().Add(time.Duration(10) * time.Second).Second(), 0, time.Local),
-                EndTime: time.Date(0, 0, 0, time.Now().Add(time.Duration(30) * time.Second).Hour(), time.Now().Add(time.Duration(30) * time.Second).Minute(), time.Now().Add(time.Duration(30) * time.Second).Second(), 0, time.Local),
-                Dynamic: false,
-                CommandOn: "echo",
-                CommandOnArgs: []string {"Hell, yeah!"},
-                CommandOff: "echo",
-                CommandOffArgs: []string {"WTF?!"},
-            })
+            var sched commands.Scheduling
+            unmErr := json.Unmarshal(body, sched)
+            if (unmErr != nil) {
+                http.Error(w, "Invalid scheduling received.", 400)
+                return
+            }
+            
+            scherr := commands.ScheduleCommand(sched)
             
             if scherr == nil {
-                fmt.Fprint(w, scherr.Error())
+                http.Error(w, scherr.Error(), 500)
             } else {
                 fmt.Fprint(w, "Entry created, your scheduling has been accepted! You can now schedule further commands or check the info tab for a list of schedulings.")
             }
@@ -356,6 +355,24 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
         }
         
         http.Error(w, "Command not found", 404)
+        
+        break
+    case "getschedulings":
+        cookie, err := r.Cookie(pioneerAccessToken)
+        valid, _ := cookieIsValid(cookie)
+        if err != nil || !valid {
+            http.Error(w, "Unauthorized", 403)
+            return
+        }
+        
+        bs, err := json.Marshal(commands.GetSchedulings())
+        if err != nil {
+            http.Error(w, "Error while retrieving schedulings: " + err.Error(), 500)
+            return
+        }
+        
+        w.Header().Set("Content-Type", "application/json")
+        fmt.Fprint(w, string(bs))
         
         break
     case "getbck":
