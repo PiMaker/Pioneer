@@ -1,3 +1,5 @@
+// Datepicker init
+
 var dateFrom = $("#dateFrom");
 var dateTo = $("#dateTo");
 
@@ -57,18 +59,21 @@ try {
     timeFallback();
 }
 
+// Popup
+
 function closepopup() {
     $("#popup").closeModal();
 }
 
-function schedule() {
-    $("#popup").openModal();
-}
+// CommandID/Close button
+
+var commandID = sessionStorage.getItem("pioneer-scheduler-cmd-id");
+$("#btnClose").text("Close Scheduler for #" + commandID);
 
 // Scheduls list
 
 Date.prototype.formatDDMMYYYY = function() {
-    return this.getDate() + "." + (this.getMonth() + 1) + "." + this.getFullYear();
+    return timePretty(this.getDate().toString()) + "." + timePretty((this.getMonth() + 1).toString()) + "." + this.getFullYear().toString();
 }
 
 function timePretty(inp) {
@@ -78,21 +83,90 @@ function timePretty(inp) {
     return inp;
 }
 
-Date.prototype.formathhmmss = function() {
-    return timePretty(this.getHours().toString()) + ":" + timePretty(this.getMinutes().toString()) + ":" + timePretty(this.getSeconds().toString());
+Date.prototype.formathhmm = function() {
+    return timePretty(this.getHours().toString()) + ":" + timePretty(this.getMinutes().toString());
 }
 
 function loadSchedules() {
-    $.getJSON("/api/getschedulings", function (json) {
+    $.getJSON("/api/getschedulings/" + commandID, function (json) {
         var list = $("#infolist");
         var html = "";
         
-        json.forEach(function(element) {
-            html += '<tr><td>' + element.ID + '</td><td>' + new Date(element.StartDate).formatDDMMYYYY() + ' - ' + new Date(element.EndDate).formatDDMMYYYY() + '</td><td>' + new Date(element.StartTime).formathhmmss() + ' - ' + new Date(element.EndTime).formathhmmss() + '</td><td><button class="btn-floating waves-effect waves-light red">X</button></td></tr>';
-        }, this);
+        if (json != null) {
+            json.forEach(function(element) {
+                html += '<tr><td>' + element.ID + '</td><td>' +
+                (element.Dynamic ? '<i class="material-icons">trending_up</i>' : '<i class="material-icons">trending_flat</i>') +
+                '</td><td>' + new Date(element.StartDate).formatDDMMYYYY() + ' - ' + new Date(element.EndDate).formatDDMMYYYY() +
+                '</td><td>' + /[0-9]{2}\:[0-9]{2}/.exec(element.StartTime)[0] + ' - ' + /[0-9]{2}\:[0-9]{2}/.exec(element.EndTime)[0] +
+                '</td><td><button class="btn-floating waves-effect waves-light red" onclick="removeScheduling(' + element.ID + ')">X</button></td></tr>';
+            }, this);
+        }
         
         list.html(html);
     });
 }
 
-loadSchedules();
+setTimeout(loadSchedules, 1);
+
+// Scheduling
+
+function schedule() {
+    $("body").addClass("loading");
+    
+    var sd = dateFromPicka.get("select");
+    var ed = dateToPicka.get("select");
+    var st = $("#timeFrom").val().split(":");
+    var et = $("#timeTo").val().split(":");
+    
+    var sched = {
+        StartDate: sd.year + "-" + timePretty((sd.month + 1).toString()) + "-" + timePretty(sd.date.toString()) + "T00:00:00" + timeOffset,
+        EndDate: ed.year + "-" + timePretty((ed.month + 1).toString()) + "-" + timePretty(ed.date.toString()) + "T00:00:00" + timeOffset,
+        StartTime: "2016-01-01T" + timePretty(parseInt(st[0]).toString()) + ":" + timePretty(parseInt(st[1]).toString()) + ":00" + timeOffset,
+        EndTime: "2016-01-01T" + timePretty(parseInt(et[0]).toString()) + ":" + timePretty(parseInt(et[1]).toString()) + ":00" + timeOffset,
+        Dynamic: $("#dynamicChk").is(':checked'),
+        CommandID: parseInt(commandID)
+    };
+    
+    var json = JSON.stringify(sched);
+    
+    $.ajax({
+        url: '/api/schedule/' + commandID,
+        type: "POST",
+        data: json,
+        contentType: "application/json",
+        dataType: "text",
+        success: function (response) {
+            loadSchedules();
+            $("body").removeClass("loading");
+            $("#popup-content").text(response);
+            $("#popup").openModal();
+        },
+        error: function (response) {
+            $("body").removeClass("loading");
+            $("#popup-content").text(response.responseText);
+            $("#popup").openModal();
+        }
+    });
+}
+
+// Removing of Schedulings
+
+function removeScheduling(id) {
+    $("body").addClass("loading");
+    $.ajax({
+        url: '/api/cancelscheduling/' + id,
+        type: "POST",
+        dataType: "text",
+        success: function (response) {
+            loadSchedules();
+            $("body").removeClass("loading");
+            $("#popup-content").text(response);
+            $("#popup").openModal();
+        },
+        error: function (response) {
+            $("body").removeClass("loading");
+            $("#popup-content").text(response.responseText);
+            $("#popup").openModal();
+        }
+    });
+}

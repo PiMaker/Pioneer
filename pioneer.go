@@ -17,6 +17,7 @@ import (
     "strings"
     "strconv"
     "bytes"
+    "math"
 )
 
 type TemplateModel struct {
@@ -25,6 +26,7 @@ type TemplateModel struct {
     LiveBackgroundInterval int
     Commands []commands.DisplayCommand
     SchedulerEnabled bool
+    TimeOffset string
 }
 
 type Token struct {
@@ -66,19 +68,6 @@ func main() {
     fmt.Println(time.Now().String() + " [INFO] Loading persistance database...")
     commands.InitScheduling()
     
-    // DEBUG
-    commands.ScheduleCommand(commands.Scheduling{
-                StartDate: time.Now(),
-                EndDate: time.Now(),
-                StartTime: time.Date(1, 1, 1, time.Now().Add(time.Duration(10) * time.Second).Hour(), time.Now().Add(time.Duration(10) * time.Second).Minute(), time.Now().Add(time.Duration(10) * time.Second).Second(), 0, time.Local),
-                EndTime: time.Date(1, 1, 1, time.Now().Add(time.Duration(30) * time.Second).Hour(), time.Now().Add(time.Duration(30) * time.Second).Minute(), time.Now().Add(time.Duration(30) * time.Second).Second(), 0, time.Local),
-                Dynamic: false,
-                CommandOn: "echo",
-                CommandOnArgs: []string {"Hell, yeah!"},
-                CommandOff: "echo",
-                CommandOffArgs: []string {"WTF?!"},
-            })
-    
     if liveBackground.enabled {
         exec.Command(liveBackground.command, liveBackground.commandArgs...)
         ticker := time.NewTicker(time.Duration(liveBackground.interval) * time.Second)
@@ -101,10 +90,20 @@ func main() {
     
     fmt.Println(time.Now().String() + " [INFO] Loading models...")
     templateModels = make(map[string]TemplateModel)
+    
+    _, timeOffset := time.Now().In(time.Local).Zone()
+    timeOffset = timeOffset / 60
+    timeOffsetString := toTwoPlaces(strconv.Itoa(int(math.Abs(float64(timeOffset)))/60)) + ":" + toTwoPlaces(strconv.Itoa(int(math.Abs(float64(timeOffset)))%60))
+    if math.Signbit(float64(timeOffset)) {
+        timeOffsetString = "-" + timeOffsetString
+    } else {
+        timeOffsetString = "+" + timeOffsetString
+    }
+    
     for user := range users {
         templateModels[user] = TemplateModel{Motd: config["motd"].(string), Commands: getCommandsForUser(user),
             LiveBackground: liveBackground.enabled && in(liveBackground.users, user), LiveBackgroundInterval: liveBackground.interval,
-            SchedulerEnabled: users[user].scheduler}
+            SchedulerEnabled: users[user].scheduler, TimeOffset: timeOffsetString}
     }
     
     var temerr error
@@ -134,7 +133,7 @@ func main() {
     } else {
         fmt.Println(time.Now().String() + " [INFO] Starting http server...")
         fmt.Println(time.Now().String() + " [WARN] SSL encryption disabled! This is not recommended, as secure connections are not possible without it!")
-        err = http.ListenAndServe(":88", nil)
+        err = http.ListenAndServe(":80", nil)
     }
     
     if err != nil {
@@ -238,6 +237,8 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
             }
         }
         
+        invalidateCookies() // Possibly not needed, but whatever
+        
         fmt.Println(time.Now().String() + " [API] User logged out, Token (" + cookie.Value + ") revoked")
         
         break
@@ -334,21 +335,20 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
         
         cmd, ok := commands.CommandsAvailable[id]
         if ok && in(cmd.AllowedUsers, token.username) {
-            fmt.Println(time.Now().String() + " [API] Scheduling command: " + cmd.Name)
-            
             var sched commands.Scheduling
-            unmErr := json.Unmarshal(body, sched)
+            unmErr := json.Unmarshal(body, &sched)
             if (unmErr != nil) {
-                http.Error(w, "Invalid scheduling received.", 400)
+                http.Error(w, "Invalid scheduling received: " + unmErr.Error(), 400)
                 return
             }
             
             scherr := commands.ScheduleCommand(sched)
             
             if scherr == nil {
-                http.Error(w, scherr.Error(), 500)
+                fmt.Println(time.Now().String() + " [API] Scheduled command: " + cmd.Name)
+                fmt.Fprint(w, "SUCCESS: Entry created, your scheduling has been accepted! You can now schedule further commands or check the info tab for a list of schedulings.")
             } else {
-                fmt.Fprint(w, "Entry created, your scheduling has been accepted! You can now schedule further commands or check the info tab for a list of schedulings.")
+                http.Error(w, scherr.Error(), 500)
             }
             
             return
@@ -356,6 +356,46 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
         
         http.Error(w, "Command not found", 404)
         
+        break
+    case "cancelscheduling":
+        if r.Method != "POST" {
+            http.Error(w, "You can only POST to this api!", http.StatusBadRequest)
+            return
+        }
+        cookie, err := r.Cookie(pioneerAccessToken)
+        valid, token := cookieIsValid(cookie)
+        if err != nil || !valid {
+            http.Error(w, "Unauthorized", 403)
+            return
+        }
+        
+        origCmd := r.URL.Path[len("/api/"):]
+        if len(origCmd) < 5 {
+            http.Error(w, "Parameter error", 500)
+            return
+        }
+        
+        id, serr := strconv.Atoi(origCmd[slashIndex + 1:])
+        if serr != nil {
+            http.Error(w, "Parameter error", 500)
+            return
+        }
+
+        sch := commands.GetSchedulingById(id)
+        if sch == nil {
+            http.Error(w, "Invalid ID", 500)
+            return
+        }
+        
+        cmd, ok := commands.CommandsAvailable[sch.CommandID]
+        if ok && in(cmd.AllowedUsers, token.username) {
+            commands.CancelScheduling(sch)
+            fmt.Fprint(w, "Scheduling #" + strconv.Itoa(id) + " has been removed. You might want to manually turn the command on/off, as subsequent actions will not happen.")
+            return
+        }
+
+        http.Error(w, "Unauthorized", 403)
+
         break
     case "getschedulings":
         cookie, err := r.Cookie(pioneerAccessToken)
@@ -365,7 +405,27 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
             return
         }
         
-        bs, err := json.Marshal(commands.GetSchedulings())
+        origCmd := r.URL.Path[len("/api/"):]
+        if len(origCmd) < 5 {
+            http.Error(w, "Parameter error", 500)
+            return
+        }
+        
+        id, serr := strconv.Atoi(origCmd[slashIndex + 1:])
+        if serr != nil {
+            http.Error(w, "Parameter error", 500)
+            return
+        }
+        
+        var toSchedule []*commands.Scheduling
+        all := commands.GetSchedulings()
+        for _, sch := range all {
+            if sch.CommandID == id {
+                toSchedule = append(toSchedule, sch)
+            }
+        }
+        
+        bs, err := json.Marshal(toSchedule)
         if err != nil {
             http.Error(w, "Error while retrieving schedulings: " + err.Error(), 500)
             return
@@ -397,6 +457,26 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
         if writeerr != nil {
             http.Error(w, writeerr.Error(), 500)
         }
+        
+        break
+    case "loginbytoken":
+        origCmd := r.URL.Path[len("/api/"):]
+        if len(origCmd) < 5 {
+            http.Error(w, "Parameter error", 500)
+            return
+        }
+        
+        token := origCmd[slashIndex + 1:]
+        
+        for i := 0; i < len(validTokens); i++ {
+            if token == validTokens[i].cookie.Value {
+                http.SetCookie(w, validTokens[i].cookie)
+                http.Redirect(w, r, "/main", 302)
+                return
+            }
+        }
+        
+        http.Error(w, "Invalid token passed.", 403)
         
         break
     }
@@ -501,4 +581,11 @@ func toStringSlice(input []interface{}) []string {
         toRet[i] = input[i].(string)
     }
     return toRet
+}
+
+func toTwoPlaces(input string) string {
+    for len(input) < 2 {
+        input = "0" + input
+    }
+    return input
 }

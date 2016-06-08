@@ -45,3 +45,8 @@ function popup(text) {
 function closepopup() {
     $("#popup").closeModal();
 }
+
+function goToScheduler(id) {
+    sessionStorage.setItem("pioneer-scheduler-cmd-id", id.toString());
+    window.location.href = "/time";
+}

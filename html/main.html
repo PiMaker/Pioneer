@@ -16,7 +16,7 @@
                 {{ range $i, $cmd := .Commands }}
                 <div class="card">
                     <div class="card-content">
-                        <span class="card-title">{{ $cmd.Name }}</span>
+                        <span class="card-title">#{{ $cmd.ID }} {{ $cmd.Name }}</span>
                         <p>{{ $cmd.Description }}</p>
                     </div>
                     <div class="card-action">
@@ -26,11 +26,12 @@
                         {{ end }}
                         
                         {{ if $cmd.IsToggle }}
-                            {{ if $.SchedulerEnabled }}
-                            <a class="btn waves-effect waves-light teal" href="/time">Go to Scheduler</a>
-                            {{ end }}
                         <button class="btn waves-effect waves-light green" onclick="cmd({{ $cmd.ID }}, 'on')">On</button>
                         <button class="btn waves-effect waves-light red" onclick="cmd({{ $cmd.ID }}, 'off')">Off</button>
+                            {{ if $.SchedulerEnabled }}
+                            <br />
+                            <button class="btn waves-effect waves-light teal" onclick="goToScheduler({{ $cmd.ID }})" style="margin-top:1em">Go to Scheduler</button>
+                            {{ end }}
                         {{ end }}
                     
                     </div>

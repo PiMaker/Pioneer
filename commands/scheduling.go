@@ -5,8 +5,7 @@ import (
     "fmt"
     "time"
     "errors"
-    "strings"
-    "os/exec"
+	"strconv"
     "os/signal"
     "math/rand"
     "database/sql"
@@ -22,10 +21,7 @@ type Scheduling struct {
     StartTime time.Time
     EndTime time.Time
     Dynamic bool
-    CommandOn string
-    CommandOnArgs []string
-    CommandOff string
-    CommandOffArgs []string
+    CommandID int
     ExecutedOn bool
     ExecutedOff bool    
 }
@@ -38,7 +34,7 @@ var scheduledCommands []*Scheduling
 
 func InitScheduling() {
     // DEBUG
-    os.Remove("./pioneer.db")
+    //os.Remove("./pioneer.db")
     
     var err error
     db, err = sql.Open("sqlite3", "./pioneer.db")
@@ -46,9 +42,9 @@ func InitScheduling() {
         panic("Database creation failed!")
     }
     
-    saveExec("CREATE TABLE IF NOT EXISTS scheduling (id INTEGER PRIMARY KEY AUTOINCREMENT, startDate DATETIME, endDate DATETIME, startTime DATETIME, endTime DATETIME, dynamic INTEGER, commandOn TEXT, commandOnArgs TEXT, commandOff TEXT, commandOffArgs TEXT, executedOn INTEGER, executedOff INTEGER)")
+    saveExec("CREATE TABLE IF NOT EXISTS scheduling (id INTEGER PRIMARY KEY AUTOINCREMENT, startDate DATETIME, endDate DATETIME, startTime DATETIME, endTime DATETIME, dynamic INTEGER, commandId INTEGER, executedOn INTEGER, executedOff INTEGER)")
     
-    rows, err2 := db.Query("SELECT id, startDate, endDate, startTime, endTime, dynamic, commandOn, commandOnArgs, commandOff, commandOffArgs, executedOn, executedOff FROM scheduling")
+    rows, err2 := db.Query("SELECT id, startDate, endDate, startTime, endTime, dynamic, commandId, executedOn, executedOff FROM scheduling")
     if err2 != sql.ErrNoRows {
         if err2 != nil {
             panic("Error on querying database!")
@@ -58,14 +54,10 @@ func InitScheduling() {
         
         for rows.Next() {
             scheduling := &Scheduling{}
-            var cmdOnArgs string
-            var cmdOffArgs string
-            err3 := rows.Scan(&scheduling.ID, &scheduling.StartDate, &scheduling.EndDate, &scheduling.StartTime, &scheduling.EndTime, &scheduling.Dynamic, &scheduling.CommandOn, &cmdOnArgs, &scheduling.CommandOff, &cmdOffArgs, &scheduling.ExecutedOn, &scheduling.ExecutedOff)
+            err3 := rows.Scan(&scheduling.ID, &scheduling.StartDate, &scheduling.EndDate, &scheduling.StartTime, &scheduling.EndTime, &scheduling.Dynamic, &scheduling.CommandID, &scheduling.ExecutedOn, &scheduling.ExecutedOff)
             if err3 != nil {
                 panic("Database select/read error!")
             }
-            scheduling.CommandOnArgs = strings.Split(cmdOnArgs, " ")
-            scheduling.CommandOffArgs = strings.Split(cmdOffArgs, " ")
             scheduledCommands = append(scheduledCommands, scheduling)
         }
         
@@ -80,42 +72,58 @@ func ScheduleCommand(scheduling Scheduling) error {
     fmt.Println(time.Now().String() + " [SCHED] Starting to schedule something...")
     
     scheduling.EndDate = time.Date(scheduling.EndDate.Year(), scheduling.EndDate.Month(), scheduling.EndDate.Day(), 23, 59, 59, 999999999, time.Local)
+    scheduling.ExecutedOn = false
+    scheduling.ExecutedOff = true
+
+    fmt.Println(scheduling.StartTime)
     
     for _, sch := range scheduledCommands {
-        if (scheduling.StartDate.Before(sch.StartDate) && scheduling.EndDate.After(sch.StartDate)) ||
-           (scheduling.EndDate.After(sch.EndDate) && scheduling.StartDate.Before(sch.EndDate)) ||
-           (scheduling.StartDate.Before(sch.StartDate) && scheduling.EndDate.After(sch.EndDate)) {
-               // Gotta check time
-                if (scheduling.StartTime.Before(sch.StartTime) && scheduling.EndTime.After(sch.StartTime)) ||
-                   (scheduling.EndTime.After(sch.EndTime) && scheduling.StartTime.Before(sch.EndTime)) ||
-                   (scheduling.StartTime.Before(sch.StartTime) && scheduling.EndTime.After(sch.EndTime)) {
-                    // Oh noes!
-                    return errors.New("This entry would collide with a different scheduled command! Scheduling not commited, please try again.")
-                }
-           }
+        if (sch.StartDate.Before(scheduling.EndDate) || dateEquals(sch.StartDate, scheduling.EndDate)) &&
+           (sch.EndDate.After(scheduling.StartDate) || dateEquals(sch.EndDate, scheduling.StartDate)) {
+            // Gotta check time
+            if (sch.StartTime.Before(scheduling.EndTime) || timeEquals(sch.StartTime, scheduling.EndTime)) &&
+               (sch.EndTime.After(scheduling.StartTime) || timeEquals(sch.EndTime, scheduling.StartTime)) {
+                // Oh noes!
+                return errors.New("ERROR: This entry would collide with a different scheduled command (#" + strconv.Itoa(sch.ID) + ")! Scheduling not commited, please try again.")
+            }
+        }
     }
     
+    id, _ := saveExec("INSERT INTO scheduling (startDate, endDate, startTime, endTime, dynamic, commandId, executedOn, executedOff) VALUES (?, ?, ?, ?, ?, ?, 0, 1)",
+        scheduling.StartDate, scheduling.EndDate, scheduling.StartTime, scheduling.EndTime, scheduling.Dynamic, scheduling.CommandID).LastInsertId()
+    scheduling.ID = int(id)
     scheduledCommands = append(scheduledCommands, &scheduling)
-    saveExec("INSERT INTO scheduling (startDate, endDate, startTime, endTime, dynamic, commandOn, commandOnArgs, commandOff, commandOffArgs, executedOn, executedOff) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1)",
-        scheduling.StartDate, scheduling.EndDate, scheduling.StartTime, scheduling.EndTime, scheduling.Dynamic, scheduling.CommandOn, schedulingArgsToString(scheduling.CommandOnArgs), scheduling.CommandOff, schedulingArgsToString(scheduling.CommandOffArgs))
+
+    fmt.Println(scheduling.StartTime)
     
     fmt.Println(time.Now().String() + " [SCHED] Scheduled something.")
     return nil
+}
+
+func dateEquals(one, two time.Time) bool {
+    return one.Year() == two.Year() && one.Month() == two.Month() && one.Day() == two.Day()
+}
+
+func timeEquals(one, two time.Time) bool {
+    return one.Hour() == two.Hour() && one.Minute() == two.Minute() && one.Second() == two.Second()
 }
 
 func GetSchedulings() []*Scheduling {
     return scheduledCommands
 }
 
-func schedulingArgsToString(in []string) string {
-    retval := ""
-    for i, val := range in {
-        if i > 0 {
-            retval += " "
+func GetSchedulingById(id int) *Scheduling {
+    for _, sch := range scheduledCommands {
+        if sch.ID == id {
+            return sch
         }
-        retval += val
     }
-    return retval
+
+    return nil
+}
+
+func CancelScheduling(sch *Scheduling) {
+    deleteScheduling(sch)
 }
 
 func closeScheduling() {
@@ -196,12 +204,14 @@ func deleteScheduling(sch *Scheduling) {
 
 func execOn(sch *Scheduling) {
     fmt.Println(time.Now().String() + " [SCHED] Activating a scheduling...")
-    _, _ = exec.Command(sch.CommandOn, sch.CommandOnArgs...).CombinedOutput()
+    cmd := CommandsAvailable[sch.CommandID]
+    cmd.ExecutableCommand.Execute("on")
 }
 
 func execOff(sch *Scheduling) {
     fmt.Println(time.Now().String() + " [SCHED] Deactivating a scheduling...")
-    _, _ = exec.Command(sch.CommandOff, sch.CommandOffArgs...).CombinedOutput()
+    cmd := CommandsAvailable[sch.CommandID]
+    cmd.ExecutableCommand.Execute("off")
 }
 
 func saveExec(cmd string, args ...interface{}) sql.Result {
