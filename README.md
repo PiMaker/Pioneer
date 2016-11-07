@@ -31,7 +31,7 @@ Alternatively, if you have a Go compiler installed you can just call `go get -v 
 
 | System type                                              |
 | -------------------------------------------------------- |
-| [darwin (32 bit)](static/Pioneer-darwin-10.6-386)        |
+| [darwin (32 bit)](static/Pioneer-darwin-10.6-386?raw=true)        |
 | [darwin (64 bit)](static/Pioneer-darwin-10.6-amd64)      |
 | [linux (32 bit)](static/Pioneer-linux-386)               |
 | [linux (64 bit)](static/Pioneer-linux-amd64)             |
