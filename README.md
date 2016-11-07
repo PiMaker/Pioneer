@@ -32,17 +32,17 @@ Alternatively, if you have a Go compiler installed you can just call `go get -v 
 | System type                                              |
 | -------------------------------------------------------- |
 | [darwin (32 bit)](static/Pioneer-darwin-10.6-386?raw=true)        |
-| [darwin (64 bit)](static/Pioneer-darwin-10.6-amd64)      |
-| [linux (32 bit)](static/Pioneer-linux-386)               |
-| [linux (64 bit)](static/Pioneer-linux-amd64)             |
-| [linux (ARM v5)](static/Pioneer-linux-arm-5)             |
-| [linux (ARM v6) (Raspberry Pi 1)](static/Pioneer-linux-arm-6)             |
-| [linux (ARM v7) (Raspberry Pi 2+)](static/Pioneer-linux-arm-7)             |
-| [linux (ARM64)](static/Pioneer-linux-arm64)              |
-| [linux (MISP64)](static/Pioneer-linux-mips64)            |
-| [linux (MIPS64le)](static/Pioneer-linux-mips64le)        |
-| [Windows (32 bit)](static/Pioneer-windows-4.0-386.exe)   |
-| [Windows (64 bit)](static/Pioneer-windows-4.0-amd64.exe) |
+| [darwin (64 bit)](static/Pioneer-darwin-10.6-amd64?raw=true)      |
+| [linux (32 bit)](static/Pioneer-linux-386?raw=true)               |
+| [linux (64 bit)](static/Pioneer-linux-amd64?raw=true)             |
+| [linux (ARM v5)](static/Pioneer-linux-arm-5?raw=true)             |
+| [linux (ARM v6) (Raspberry Pi 1)](static/Pioneer-linux-arm-6?raw=true)             |
+| [linux (ARM v7) (Raspberry Pi 2+)](static/Pioneer-linux-arm-7?raw=true)             |
+| [linux (ARM64)](static/Pioneer-linux-arm64?raw=true)              |
+| [linux (MISP64)](static/Pioneer-linux-mips64?raw=true)            |
+| [linux (MIPS64le)](static/Pioneer-linux-mips64le?raw=true)        |
+| [Windows (32 bit)](static/Pioneer-windows-4.0-386.exe?raw=true)   |
+| [Windows (64 bit)](static/Pioneer-windows-4.0-amd64.exe?raw=true) |
 
 Thanks [XGo](https://github.com/karalabe/xgo)!
 
