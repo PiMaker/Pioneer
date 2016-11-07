@@ -1,6 +1,6 @@
 # Pioneer
 
-![GitHub stars](https://img.shields.io/github/stars/badges/shields.svg?style=social&label=Star)
+![GitHub stars](https://img.shields.io/github/stars/PiMaker/Pioneer.svg?style=social&label=Star)
 
 ### Problem
 
@@ -29,13 +29,15 @@ Alternatively, if you have a Go compiler installed you can just call `go get -v 
 
 ### Download
 
+| System type                                              |
+| -------------------------------------------------------- |
 | [darwin (32 bit)](static/Pioneer-darwin-10.6-386)        |
 | [darwin (64 bit)](static/Pioneer-darwin-10.6-amd64)      |
 | [linux (32 bit)](static/Pioneer-linux-386)               |
 | [linux (64 bit)](static/Pioneer-linux-amd64)             |
 | [linux (ARM v5)](static/Pioneer-linux-arm-5)             |
-| [linux (ARM v6)](static/Pioneer-linux-arm-6)             |
-| [linux (ARM v7)](static/Pioneer-linux-arm-7)             |
+| [linux (ARM v6) (Raspberry Pi 1)](static/Pioneer-linux-arm-6)             |
+| [linux (ARM v7) (Raspberry Pi 2+)](static/Pioneer-linux-arm-7)             |
 | [linux (ARM64)](static/Pioneer-linux-arm64)              |
 | [linux (MISP64)](static/Pioneer-linux-mips64)            |
 | [linux (MIPS64le)](static/Pioneer-linux-mips64le)        |
@@ -50,8 +52,8 @@ Look at the file `config.json` in this repository's root folder for documentatio
 
 ### Screenshots
 
+![screenshot2](static/screenshot2.jpeg)
 ![screenshot1](static/screenshot1.jpeg)
-![screenshot1](static/screenshot2.jpeg)
 
 Note: To get the amazing `htop` background image, you have to use the live background feature. Don't ask me how exactly I set it up though, this was one of those "it's almost midnight I want to do something fun" ideas, it quickly turned into a garbled mess though (as one would expect).
 
