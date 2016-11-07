@@ -57,6 +57,13 @@ Look at the file `config.json` in this repository's root folder for documentatio
 
 Note: To get the amazing `htop` background image, you have to use the live background feature. Don't ask me how exactly I set it up though, this was one of those "it's almost midnight I want to do something fun" ideas, it quickly turned into a garbled mess though (as one would expect).
 
+### TODO
+
+* Documentation
+* Testing
+
+Note that this was started as a small side project, so the code is rather messy right now. It does work though, I've never had it crash on me after about half a year of continuous usage on a Raspberry Pi 2.
+
 ### License
 
 This project is licensed under the MIT License. Look at [LICENSE](LICENSE) for further details.
