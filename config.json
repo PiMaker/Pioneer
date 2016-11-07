@@ -1,8 +1,16 @@
 {
+    // Specify "True" and add file paths here to enable HTTPS (heavily recommended)
     "ssl": "False",
     // "certFile": "",
     // "keyFile": "",
+    
+    // This message will be displayed in the web interface
     "motd": "Welcome to Pioneer!",
+
+    // Live background enables you to create a "status" image using a command that will be executed every "interval" seconds,
+    // afterwards the file "filename" will be sent to the client and set as the background image.
+    // The feature is disabled for users not listed in "users". The command will only be executed if one of these users is currently logged in.
+    // Tip: Take a snapshot of "htop" with your command, looks really cool as a live background!
     "live_background": {
         "enabled": false,
         "command": "echo Create your status image with this command!",
@@ -12,6 +20,9 @@
             "pi"
         ]
     },
+
+    // User configuration
+    // Scheduler defines if this user can schedule commands for later.
     "users": [
         {
             "username": "pi",
@@ -24,22 +35,32 @@
             "scheduler": false
         }
     ],
+
+    // This is the list of commands
     "commands": [
         {
+            // Type: basic for single execute, toggle for On/Off situtations (see second command for an example)
             "type": "basic",
+            // Display name
             "name": "Hello World",
+            // Shown in the UI
             "description": "Returns 'Hello World!'.",
+            // Which users can execute this command
             "users": [
                 "pi",
                 "restricted"
             ],
+            // The actual command is defined in "data"
             "data": {
+                // The command to call
                 "command": "echo",
+                // The parameters to pass
+                // Every entry in this array is passed as *one* parameter
                 "args": [
                     "Hello World!"
                 ]
             }
-            // "periodic_exec": 10 // This command would silently execute every 10 seconds
+            // "periodic_exec": 10 // This command would silently execute every 10 seconds, useful for watchdogs and the like
         },
         {
             "type": "toggle",
@@ -49,10 +70,12 @@
                 "pi"
             ],
             "data": {
+                // command_on with args_on is executed when this command should toggle "on"
                 "command_on": "echo",
                 "args_on": [
                     "Turned on!"
                 ],
+                // command_off with args_off is executed when this command should toggle "off"
                 "command_off": "echo",
                 "args_off": [
                     "Turned off!"
